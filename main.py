@@ -33,7 +33,7 @@ class Piece:
 
 
 
-def init_board(width, height):
+def init_board(width: int, height: int):
     """Initialize the board as empty."""
     global board
     board = {}
@@ -41,11 +41,28 @@ def init_board(width, height):
         for y in range(1, height+1):
             insert_piece(None, x, y)
 
-def get_piece(x, y) -> Piece | None:
-    """Returns the piece at a given coordinate"""
+def get_piece(x: int, y: int) -> Piece | None:
+    """Returns the piece at a given coordinate. Returns None if no piece or out of bounds."""
+    if out_of_bounds(x, y):
+        return None
     return board[x*10 + y]
 
-def insert_piece(piece: Piece | None, x, y):
-    """Insert a piece at the given coordinates."""
+def insert_piece(piece: Piece | None, x: int, y: int) -> bool:
+    """Insert a piece at the given coordinates. Returns true if successful."""
+    if out_of_bounds(x, y):
+        return False
     board[x*10 + y] = piece
+    return True
 
+def out_of_bounds(x: int, y: int) -> bool:
+    """Returns True if x, y is outside the board"""
+    return 0 > x or x >= WIDTH or 0 > y or y >= HEIGHT
+
+def stringify_board() -> str:
+    row_sep = "+--"*WIDTH + "+"
+    result = ""
+    result += row_sep
+    for y in range(HEIGHT):
+        result += "|"
+        for x in range(WIDTH):
+            get_piece()
