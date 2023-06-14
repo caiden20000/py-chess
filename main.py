@@ -1,7 +1,7 @@
 from enum import Enum
 
 # Chess board is from a1 to h8
-# Inner coords replace letter with number: 11 to 88
+# Inner coords replace letter with number: 00 to 77
 
 WIDTH = 8
 HEIGHT = 8
@@ -30,39 +30,58 @@ class Piece:
     def __init__(self, piece_type: PieceType, color: PieceColor):
         self.type = piece_type
         self.color = color
+    def stringify(self) -> str:
+        """Returns a string representation of the piece. Should be str of length 3."""
+        return self.color.value + self.type.value.upper() + self.color.value
 
 
 
-def init_board(width: int, height: int):
+def init_board(width: int = 8, height: int = 8):
     """Initialize the board as empty."""
     global board
     board = {}
-    for x in range(1, width+1):
-        for y in range(1, height+1):
+    for x in range(width):
+        for y in range(height):
             insert_piece(None, x, y)
+
+def _board_key(x: int, y: int) -> str:
+    return str(x*10 + y)
 
 def get_piece(x: int, y: int) -> Piece | None:
     """Returns the piece at a given coordinate. Returns None if no piece or out of bounds."""
     if out_of_bounds(x, y):
         return None
-    return board[x*10 + y]
+    return board[_board_key(x, y)]
 
 def insert_piece(piece: Piece | None, x: int, y: int) -> bool:
     """Insert a piece at the given coordinates. Returns true if successful."""
     if out_of_bounds(x, y):
         return False
-    board[x*10 + y] = piece
+    board[_board_key(x, y)] = piece
     return True
 
 def out_of_bounds(x: int, y: int) -> bool:
     """Returns True if x, y is outside the board"""
     return 0 > x or x >= WIDTH or 0 > y or y >= HEIGHT
 
-def stringify_board() -> str:
-    row_sep = "+--"*WIDTH + "+"
-    result = ""
-    result += row_sep
+def stringify_board(show_coords: bool = False) -> str:
+    """Returns the string representation of the board. For UI usage."""
+    row_sep = "+---"*WIDTH + "+\n"
+    result = row_sep
     for y in range(HEIGHT):
         result += "|"
         for x in range(WIDTH):
-            get_piece()
+            piece = get_piece(x, y)
+            if piece is None:
+                result += "   "
+            else:
+                result += get_piece(x, y).stringify()
+            result += "|"
+        result += "\n" + row_sep
+    return result
+
+def standard_board_setup():
+    pass
+
+init_board()
+print(stringify_board())
