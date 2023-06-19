@@ -47,6 +47,18 @@ def init_board(width: int = 8, height: int = 8):
 def _board_key(x: int, y: int) -> str:
     return str(x*10 + y)
 
+def coords_stringify(x: int, y: int) -> str:
+    """Returns a human readable coordinate, a1 to h8."""
+    conv = "abcdefgh"
+    return conv[x] + str(y+1)
+
+def coords_string_to_tuple(coord: str) -> tuple:
+    """Converts human readable coordinates (a1, g3, ...) to x, y tuple."""
+    if len(coord) != 2:
+        raise ValueError("Coordinate must be length of 2! Received: " + coord)
+    conv = "abcdefgh"
+    return (conv.index(coord[0]), int(coord[1]))
+
 def get_piece(x: int, y: int) -> Piece | None:
     """Returns the piece at a given coordinate. Returns None if no piece or out of bounds."""
     if out_of_bounds(x, y):
@@ -81,7 +93,31 @@ def stringify_board(show_coords: bool = False) -> str:
     return result
 
 def standard_board_setup():
-    pass
+    """Sets up the standard chess game initial state."""
+    # Reminder: (0, 0) is a1
+    for x in range(WIDTH):
+        insert_piece(Piece(PieceType.PAWN, PieceColor.WHITE), x, 1)
+        insert_piece(Piece(PieceType.PAWN, PieceColor.BLACK), x, 6)
+    # White side
+    insert_piece(Piece(PieceType.ROOK, PieceColor.WHITE), 0, 0)
+    insert_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE), 1, 0)
+    insert_piece(Piece(PieceType.BISHOP, PieceColor.WHITE), 2, 0)
+    insert_piece(Piece(PieceType.QUEEN, PieceColor.WHITE), 3, 0)
+    insert_piece(Piece(PieceType.KING, PieceColor.WHITE), 4, 0)
+    insert_piece(Piece(PieceType.BISHOP, PieceColor.WHITE), 5, 0)
+    insert_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE), 6, 0)
+    insert_piece(Piece(PieceType.ROOK, PieceColor.WHITE), 7, 0)
+    # Black side
+    insert_piece(Piece(PieceType.ROOK, PieceColor.BLACK), 0, 7)
+    insert_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK), 1, 7)
+    insert_piece(Piece(PieceType.BISHOP, PieceColor.BLACK), 2, 7)
+    insert_piece(Piece(PieceType.QUEEN, PieceColor.BLACK), 3, 7)
+    insert_piece(Piece(PieceType.KING, PieceColor.BLACK), 4, 7)
+    insert_piece(Piece(PieceType.BISHOP, PieceColor.BLACK), 5, 7)
+    insert_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK), 6, 7)
+    insert_piece(Piece(PieceType.ROOK, PieceColor.BLACK), 7, 7)
+
 
 init_board()
+standard_board_setup()
 print(stringify_board())
