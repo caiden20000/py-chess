@@ -25,6 +25,46 @@ class PieceType(Enum):
     QUEEN = "q"
     KING = "k"
 
+class Coords:
+    MIN_WIDTH = 0
+    MAX_WIDTH = 7
+    MIN_HEIGHT = 0
+    MAX_HEIGHT = 7
+    LETTERS = "abcdefgh"
+    NUMBERS = "12345678"
+    def __init__(self, x: int = 0, y: int = 0, string: str = ""):
+        if string == "":
+            self.x = x
+            self.y = y
+            self.out_of_bounds(raise_err = True)
+        else:
+            self.set_by_string(string)
+    @staticmethod
+    def validate_str(coords: str, raise_err: bool = False) -> bool:
+        """Returns true if coord string is valid. EG. e1 is valid, w9 is not."""
+        if len(coords) != 2 or coords[0] not in Coords.LETTERS or coords[1] not in Coords.NUMBERS:
+            if raise_err:
+                raise ValueError("The given coordinates are not valid! Given: " + coords)
+            return False
+        return True
+    def out_of_bounds(self, raise_err: bool = False) -> bool:
+        oob = self.x < self.MIN_WIDTH \
+            or self.x > self.MAX_WIDTH \
+            or self.y < self.MIN_HEIGHT \
+            or self.y > self.MAX_HEIGHT
+        if oob and raise_err:
+            raise ValueError(f"Coordinates out of bounds! Given: ({self.x}, {self.y})")
+        return oob
+    def get_string(self) -> str:
+        return Coords.LETTERS[self.x] + Coords.NUMBERS[self.y]
+    def set_by_string(self, string):
+        self.validate_str(string, raise_err = True)
+        self.x = Coords.NUMBERS.index(string[0])
+        self.y = Coords.LETTERS.index(string[1])
+    def to_board_key(self):
+        return str(x*10 + y)
+        
+
 class Piece:
     """Class to represent a chess piece."""
     def __init__(self, piece_type: PieceType, color: PieceColor):
@@ -44,48 +84,21 @@ def init_board(width: int = 8, height: int = 8):
         for y in range(height):
             insert_piece(None, x, y)
 
-def _board_key(x: int, y: int) -> str:
+def _board_key(coords: Coords) -> str:
     return str(x*10 + y)
 
-def validate_coords_string(coord: str) -> bool:
-    """Returns true if coord string is valid. EG. e1 is valid, w9 is not."""
-    if len(coord) != 2: return False
-    letter = "abcdefgh"
-    number = "12345678"
-    if coord[0] not in letter: return False
-    if coord[1] not in number: return False
-    return True
-
-def coords_stringify(x: int, y: int) -> str:
-    """Returns a human readable coordinate, a1 to h8."""
-    conv = "abcdefgh"
-    if out_of_bounds(x, y):
-        raise ValueError(f"Coordinates out of bounds! Given: ({x}, {y})")
-    return conv[x] + str(y+1)
-
-def coords_string_to_tuple(coord: str) -> tuple:
-    """Converts human readable coordinates (a1, g3, ...) to x, y tuple."""
-    if not validate_coords_string(coord):
-        raise ValueError("The given coordinates are not valid! Given: " + coord)
-    conv = "abcdefgh"
-    return (conv.index(coord[0]), int(coord[1]))
-
-def get_piece(x: int, y: int) -> Piece | None:
+def get_piece(coords: Coords) -> Piece | None:
     """Returns the piece at a given coordinate. Returns None if no piece or out of bounds."""
-    if out_of_bounds(x, y):
+    if coords.out_of_bounds():
         return None
-    return board[_board_key(x, y)]
+    return board[coords.to_board_key()]
 
-def insert_piece(piece: Piece | None, x: int, y: int) -> bool:
+def insert_piece(piece: Piece | None, coords: Coords) -> bool:
     """Insert a piece at the given coordinates. Returns true if successful."""
-    if out_of_bounds(x, y):
+    if coords.out_of_bounds():
         return False
-    board[_board_key(x, y)] = piece
+    board[coords.to_board_key()] = piece
     return True
-
-def out_of_bounds(x: int, y: int) -> bool:
-    """Returns True if x, y is outside the board"""
-    return 0 > x or x >= WIDTH or 0 > y or y >= HEIGHT
 
 def stringify_board(show_coords: bool = False) -> str:
     """Returns the string representation of the board. For UI usage."""
@@ -144,6 +157,7 @@ def parse_move(move: str) -> list[tuple]:
     return [coords_string_to_tuple(coords[0]), coords_string_to_tuple(coords[1])]
 
 def is_move_legal(move: str) -> bool:
+    """Central logic for whether a requested move is played or not."""
     coords = parse_move(move)
 
 init_board()
