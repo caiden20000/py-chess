@@ -94,9 +94,15 @@ class Board:
         self.move_piece(piece, new_coords)
         return True
     def stringify(self, show_coords: bool = False):
+        letters_coords = "    a   b   c   d   e   f   g   h  "
         row_sep = "+---"*WIDTH + "+\n"
-        result = row_sep
+        result = ""
+        if show_coords:
+            result += letters_coords + "\n  "
+        result += row_sep
         for y in range(HEIGHT):
+            if show_coords:
+                result += str(8-y) + " "
             result += "|"
             for x in range(WIDTH):
                 piece = self.get_piece(Coords(x, 7-y))
@@ -105,7 +111,14 @@ class Board:
                 else:
                     result += self.get_piece(Coords(x, 7-y)).stringify()
                 result += "|"
-            result += "\n" + row_sep
+            if show_coords:
+                result += " " + str(8-y)
+            result += "\n"
+            if show_coords:
+                result += "  "
+            result += row_sep
+        if show_coords:
+            result += letters_coords + "\n"
         return result
     def standard_board_setup(self):
         for x in range(WIDTH):
@@ -157,7 +170,7 @@ def move(board: Board, move_str: str):
 
 global_board = Board()
 global_board.standard_board_setup()
-print(global_board.stringify())
+print(global_board.stringify(True))
 
 while True:
     user_input = input()
@@ -166,4 +179,4 @@ while True:
     except KeyError:
         print("Input error, try again:\n")
     else:
-        print("\n\n" + global_board.stringify() + "\n")
+        print("\n\n" + global_board.stringify(True) + "\n")
