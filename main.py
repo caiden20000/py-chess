@@ -20,6 +20,30 @@ class PieceType(Enum):
     QUEEN = "q"
     KING = "k"
 
+def piece_color_to_str(piece_color: PieceColor) -> str:
+    """Get a user-friendly string from the PieceColor enum."""
+    if piece_color == PieceColor.BLACK:
+        return "Black"
+    if piece_color == PieceColor.WHITE:
+        return "White"
+    return "UNKNOWN"
+
+def piece_type_to_str(piece_type: PieceType) -> str:
+    """Get a user-friendly string from the PieceType enum."""
+    if piece_type == PieceType.PAWN:
+        return "Pawn"
+    if piece_type == PieceType.ROOK:
+        return "Rook"
+    if piece_type == PieceType.KNIGHT:
+        return "Knight"
+    if piece_type == PieceType.BISHOP:
+        return "Bishop"
+    if piece_type == PieceType.QUEEN:
+        return "Queen"
+    if piece_type == PieceType.KING:
+        return "King"
+    return "UNKNOWN"
+
 class Coords:
     """Object to represent a position on a chess board."""
     MIN_WIDTH = 0
@@ -66,9 +90,11 @@ class Piece:
         self.type = piece_type
         self.color = color
         self.coords = coords
+        self.has_moved = False
     def stringify(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
         return self.color.value + self.type.value.upper() + self.color.value
+
 
 class Board:
     """Class to represent a chess board."""
@@ -86,6 +112,8 @@ class Board:
     def move_piece(self, piece: Piece, new_coords: Coords):
         self.pieces[piece.coords.to_board_key()] = None
         piece.coords = new_coords
+        if piece.has_moved is False:
+            piece.has_moved = True
         self.set_piece(piece)
     def move(self, old_coords: Coords, new_coords: Coords) -> bool:
         piece = self.get_piece(old_coords)
@@ -94,6 +122,8 @@ class Board:
         self.move_piece(piece, new_coords)
         return True
     def stringify(self, show_coords: bool = False):
+        # letters_coords = ' '*4 + ''.join([l + " "*3 for l in 'abcdefgh'])
+        # letters_coords = ' '*4 + '   '.join('abcdefgh')
         letters_coords = "    a   b   c   d   e   f   g   h  "
         row_sep = "+---"*WIDTH + "+\n"
         result = ""
@@ -158,25 +188,59 @@ def parse_move(move_str: str) -> tuple[Coords]:
     # String parsing done, convert coords for internal use
     return (Coords(string = coords[0]), Coords(string = coords[1]))
 
-def is_move_legal(old_coords: Coords, new_coords: Coords) -> bool:
-    """Central logic for whether a requested move is played or not."""
-    return True
+# How do we represent legal moves?
+# Loop add moves in a direction until we encounter a piece.
+# Add all empty spaces found to "legal" list, add all pieces to "possible_capture" list.
+#   For special pieces like the pawn, exceptions are made.
+# Add all spaces that contain enemy pieces from the "possible_capture" list to the "legal" list.
+# Return the legal list.
+def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
+    """Returns a list of every legal move the piece at old_coords can make."""
+    legal: list[Coords] = []
+    possible_capture: list[Coords] = []
+    piece = board.get_piece(old_coords)
+
+    # Lots of code here
+
+    # Add legal captures to legal list
+    for coords in possible_capture:
+        if board.get_piece(coords).color != piece.color:
+            legal.append(coords)
+    return legal
+
+
+def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
+    """Returns true if new_coords is in the list of all legal moves for the piece at old_coords."""
+    return new_coords in get_all_legal_moves(board, old_coords)
+
+def capture(captured_piece: Piece):
+    """Called when a piece is captured. Responsible only for points distribution and notification."""
+    capturer = "BLACK" if captured_piece.color == PieceColor.WHITE else "WHITE"
+    print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
+    # TODO: Some points logic here
 
 def move(board: Board, move_str: str):
+    """Executes a move based on a valid move string."""
     coords = parse_move(move_str)
-    if is_move_legal(*coords):
+    if is_move_legal(board, *coords):
+        captured_piece = board.get_piece(coords[1])
+        if captured_piece is not None:
+            # Capture
+            capture(captured_piece)
         board.move(*coords)
 
+def game():
+    """Main game loop."""
+    board = Board()
+    board.standard_board_setup()
+    print(board.stringify(True))
 
-global_board = Board()
-global_board.standard_board_setup()
-print(global_board.stringify(True))
-
-while True:
-    user_input = input()
-    try:
-        move(global_board, user_input)
-    except KeyError:
-        print("Input error, try again:\n")
-    else:
-        print("\n\n" + global_board.stringify(True) + "\n")
+    exit_loop = False
+    while exit_loop is False:
+        user_input = input()
+        try:
+            move(board, user_input)
+        except KeyError:
+            print("Input error, try again:\n")
+        else:
+            print("\n\n" + board.stringify(True) + "\n")
