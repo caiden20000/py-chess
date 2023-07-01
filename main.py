@@ -190,11 +190,11 @@ def parse_move(move_str: str) -> tuple[Coords]:
 
 def out_of_bounds(x: int, y: int) -> bool:
     """Returns true if the given coordinate elements are out of bounds."""
-    pass
+    return 0 > x or WIDTH <= x or 0 > y or HEIGHT <= y
 
 def piece_exists_at(board: Board, coords: Coords) -> bool:
     """Returns true if any piece at the given coordinates."""
-    pass
+    return board.get_piece(coords) is not None
 
 # How do we represent legal moves?
 # Loop add moves in a direction until we encounter a piece.
