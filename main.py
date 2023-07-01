@@ -188,6 +188,14 @@ def parse_move(move_str: str) -> tuple[Coords]:
     # String parsing done, convert coords for internal use
     return (Coords(string = coords[0]), Coords(string = coords[1]))
 
+def out_of_bounds(x: int, y: int) -> bool:
+    """Returns true if the given coordinate elements are out of bounds."""
+    pass
+
+def piece_exists_at(board: Board, coords: Coords) -> bool:
+    """Returns true if any piece at the given coordinates."""
+    pass
+
 # How do we represent legal moves?
 # Loop add moves in a direction until we encounter a piece.
 # Add all empty spaces found to "legal" list, add all pieces to "possible_capture" list.
@@ -200,7 +208,17 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     possible_capture: list[Coords] = []
     piece = board.get_piece(old_coords)
 
-    # Lots of code here
+    # TODO: Pawn legal moves
+
+    # TODO: Rook legal moves
+
+    # TODO: Knight legal moves
+
+    # TODO: Bishop legal moves
+
+    # TODO: Queen legal moves
+
+    # TODO: King legal moves
 
     # Add legal captures to legal list
     for coords in possible_capture:
