@@ -6,10 +6,12 @@ from enum import Enum
 WIDTH = 8
 HEIGHT = 8
 
+
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
     BLACK = "b"
     WHITE = "w"
+
 
 class PieceType(Enum):
     """Enum to represent a chess piece type."""
@@ -20,6 +22,7 @@ class PieceType(Enum):
     QUEEN = "q"
     KING = "k"
 
+
 def piece_color_to_str(piece_color: PieceColor) -> str:
     """Get a user-friendly string from the PieceColor enum."""
     if piece_color == PieceColor.BLACK:
@@ -27,6 +30,7 @@ def piece_color_to_str(piece_color: PieceColor) -> str:
     if piece_color == PieceColor.WHITE:
         return "White"
     return "UNKNOWN"
+
 
 def piece_type_to_str(piece_type: PieceType) -> str:
     """Get a user-friendly string from the PieceType enum."""
@@ -44,6 +48,7 @@ def piece_type_to_str(piece_type: PieceType) -> str:
         return "King"
     return "UNKNOWN"
 
+
 class Coords:
     """Object to represent a position on a chess board."""
     MIN_WIDTH = 0
@@ -52,45 +57,56 @@ class Coords:
     MAX_HEIGHT = 7
     LETTERS = "abcdefgh"
     NUMBERS = "12345678"
+
     def __init__(self, x: int = 0, y: int = 0, string: str = ""):
         if string == "":
             self.x = x
             self.y = y
-            self.out_of_bounds(raise_err = True)
+            self.out_of_bounds(raise_err=True)
         else:
             self.set_by_string(string)
+
     @staticmethod
     def validate_str(coords: str, raise_err: bool = False) -> bool:
         """Returns true if coord string is valid. EG. e1 is valid, w9 is not."""
         if len(coords) != 2 or coords[0] not in Coords.LETTERS or coords[1] not in Coords.NUMBERS:
             if raise_err:
-                raise ValueError("The given coordinates are not valid! Given: " + coords)
+                raise ValueError(
+                    "The given coordinates are not valid! Given: " + coords)
             return False
         return True
+
     def out_of_bounds(self, raise_err: bool = False) -> bool:
         oob = self.x < self.MIN_WIDTH \
             or self.x > self.MAX_WIDTH \
             or self.y < self.MIN_HEIGHT \
             or self.y > self.MAX_HEIGHT
         if oob and raise_err:
-            raise ValueError(f"Coordinates out of bounds! Given: ({self.x}, {self.y})")
+            raise ValueError(
+                f"Coordinates out of bounds! Given: ({self.x}, {self.y})")
         return oob
+
     def get_string(self) -> str:
         return Coords.LETTERS[self.x] + Coords.NUMBERS[self.y]
+
     def set_by_string(self, string):
-        self.validate_str(string, raise_err = True)
+        self.validate_str(string, raise_err=True)
         self.x = Coords.LETTERS.index(string[0])
         self.y = Coords.NUMBERS.index(string[1])
+
     def to_board_key(self):
         return f"{self.x}:{self.y}"
 
+
 class Piece:
     """Class to represent a chess piece."""
+
     def __init__(self, piece_type: PieceType, color: PieceColor, coords: Coords):
         self.type = piece_type
         self.color = color
         self.coords = coords
         self.has_moved = False
+
     def stringify(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
         return self.color.value + self.type.value.upper() + self.color.value
@@ -98,29 +114,36 @@ class Piece:
 
 class Board:
     """Class to represent a chess board."""
+
     def __init__(self):
         self.pieces: dict[Piece | None] = {}
+
     def get_piece(self, coords: Coords) -> Piece | None:
         try:
             return self.pieces[coords.to_board_key()]
         except KeyError:
             return None
+
     def set_piece(self, piece: Piece):
         self.pieces[piece.coords.to_board_key()] = piece
+
     def remove_piece(self, coords: Coords):
         self.pieces[coords] = None
+
     def move_piece(self, piece: Piece, new_coords: Coords):
         self.pieces[piece.coords.to_board_key()] = None
         piece.coords = new_coords
         if piece.has_moved is False:
             piece.has_moved = True
         self.set_piece(piece)
+
     def move(self, old_coords: Coords, new_coords: Coords) -> bool:
         piece = self.get_piece(old_coords)
         if piece is None:
             return False
         self.move_piece(piece, new_coords)
         return True
+
     def stringify(self, show_coords: bool = False):
         # letters_coords = ' '*4 + ''.join([l + " "*3 for l in 'abcdefgh'])
         # letters_coords = ' '*4 + '   '.join('abcdefgh')
@@ -150,10 +173,13 @@ class Board:
         if show_coords:
             result += letters_coords + "\n"
         return result
+
     def standard_board_setup(self):
         for x in range(WIDTH):
-            self.set_piece(Piece(PieceType.PAWN, PieceColor.WHITE, Coords(x, 1)))
-            self.set_piece(Piece(PieceType.PAWN, PieceColor.BLACK, Coords(x, 6)))
+            self.set_piece(
+                Piece(PieceType.PAWN, PieceColor.WHITE, Coords(x, 1)))
+            self.set_piece(
+                Piece(PieceType.PAWN, PieceColor.BLACK, Coords(x, 6)))
         # White side
         self.set_piece(Piece(PieceType.ROOK, PieceColor.WHITE, Coords(0, 0)))
         self.set_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE, Coords(1, 0)))
@@ -174,27 +200,61 @@ class Board:
         self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK, Coords(7, 7)))
 
 # Accepts input in xy-xy format. (source-destination)
+
+
 def parse_move(move_str: str) -> tuple[Coords]:
     """Parses moves in 'xy-xy' format. Returns tuple pair of Coords."""
     if len(move_str) != 5:
-        raise ValueError("Incorrect string length for move. Given: " + move_str)
+        raise ValueError(
+            "Incorrect string length for move. Given: " + move_str)
     coords = move_str.split("-")
     if len(coords) != 2:
         raise ValueError("Incorrectly delimited! Given: " + move_str)
     if not Coords.validate_str(coords[0]):
-        raise ValueError("First coordinate formatting error. Given: " + coords[0])
+        raise ValueError(
+            "First coordinate formatting error. Given: " + coords[0])
     if not Coords.validate_str(coords[1]):
-        raise ValueError("Second coordinate formatting error. Given: " + coords[1])
+        raise ValueError(
+            "Second coordinate formatting error. Given: " + coords[1])
     # String parsing done, convert coords for internal use
-    return (Coords(string = coords[0]), Coords(string = coords[1]))
+    return (Coords(string=coords[0]), Coords(string=coords[1]))
+
 
 def out_of_bounds(x: int, y: int) -> bool:
     """Returns true if the given coordinate elements are out of bounds."""
     return 0 > x or WIDTH <= x or 0 > y or HEIGHT <= y
 
+
 def piece_exists_at(board: Board, coords: Coords) -> bool:
     """Returns true if any piece at the given coordinates."""
     return board.get_piece(coords) is not None
+
+
+def _linear_iteration(board: Board, 
+                      old_coords: Coords, 
+                      dx: int, dy: int, 
+                      limit: int = 50) -> dict[list[Coords]]:
+    legal: list[Coords] = []
+    possible_capture: list[Coords] = []
+    x, y = old_coords.x, old_coords.y
+    counter = 0
+    while True:
+        # infinite loop detector
+        if counter == limit:
+            break
+        x += dx
+        y += dy
+        if x == old_coords.x and y == old_coords.y:
+            continue
+        if out_of_bounds(x, y):
+            break
+        if piece_exists_at(board, Coords(x, y)):
+            possible_capture.append(Coords(x, y))
+            break
+        else:
+            legal.append(Coords(x, y))
+        counter += 1
+    return {"legal": legal, "possible_capture": possible_capture}
 
 # How do we represent legal moves?
 # Loop add moves in a direction until we encounter a piece.
@@ -202,6 +262,8 @@ def piece_exists_at(board: Board, coords: Coords) -> bool:
 #   For special pieces like the pawn, exceptions are made.
 # Add all spaces that contain enemy pieces from the "possible_capture" list to the "legal" list.
 # Return the legal list.
+
+
 def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     """Returns a list of every legal move the piece at old_coords can make."""
     legal: list[Coords] = []
@@ -211,14 +273,51 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     # TODO: Pawn legal moves
 
     # TODO: Rook legal moves
+    if piece.type == PieceType.ROOK:
+        # Leftwards, Rightwards, Upwards, Downwards
+        directions = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+        for direction in directions:
+            wards = _linear_iteration(board, old_coords, *direction)
+            legal += wards["legal"]
+            possible_capture += wards["possible_capture"]
 
     # TODO: Knight legal moves
+    if piece.type == PieceType.KNIGHT:
+        # Y'know, knight moves.
+        directions = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
+        for direction in directions:
+            wards = _linear_iteration(board, old_coords, *direction, limit = 1)
+            legal += wards["legal"]
+            possible_capture += wards["possible_capture"]
 
     # TODO: Bishop legal moves
+    if piece.type == PieceType.BISHOP:
+        # SW, NW, NE, SE
+        directions = [(-1, -1), (-1, 1), (1, 1), (1, -1)]
+        for direction in directions:
+            wards = _linear_iteration(board, old_coords, *direction)
+            legal += wards["legal"]
+            possible_capture += wards["possible_capture"]
 
     # TODO: Queen legal moves
+    if piece.type == PieceType.QUEEN:
+        # Leftwards, Rightwards, Upwards, Downwards, SW, NW, NE, SE
+        directions = [(-1, 0), (1, 0), (0, 1), (0, -1),
+                      (-1, -1), (-1, 1), (1, 1), (1, -1)]
+        for direction in directions:
+            wards = _linear_iteration(board, old_coords, *direction)
+            legal += wards["legal"]
+            possible_capture += wards["possible_capture"]
 
     # TODO: King legal moves
+    if piece.type == PieceType.KING:
+        # Leftwards, Rightwards, Upwards, Downwards, SW, NW, NE, SE
+        directions = [(-1, 0), (1, 0), (0, 1), (0, -1),
+                      (-1, -1), (-1, 1), (1, 1), (1, -1)]
+        for direction in directions:
+            wards = _linear_iteration(board, old_coords, *direction, limit = 1)
+            legal += wards["legal"]
+            possible_capture += wards["possible_capture"]
 
     # Add legal captures to legal list
     for coords in possible_capture:
@@ -231,11 +330,13 @@ def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
     """Returns true if new_coords is in the list of all legal moves for the piece at old_coords."""
     return new_coords in get_all_legal_moves(board, old_coords)
 
+
 def capture(captured_piece: Piece):
     """Called when a piece is captured. Responsible only for points distribution and notification."""
     capturer = "BLACK" if captured_piece.color == PieceColor.WHITE else "WHITE"
     print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
     # TODO: Some points logic here
+
 
 def move(board: Board, move_str: str):
     """Executes a move based on a valid move string."""
@@ -246,6 +347,7 @@ def move(board: Board, move_str: str):
             # Capture
             capture(captured_piece)
         board.move(*coords)
+
 
 def game():
     """Main game loop."""
