@@ -271,6 +271,25 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     piece = board.get_piece(old_coords)
 
     # TODO: Pawn legal moves
+    if piece.type == PieceType.PAWN:
+        if piece.color == PieceColor.WHITE:
+            # +y
+            forwards = _linear_iteration(board, old_coords, 0, 1,
+                                         limit = 1 if piece.has_moved else 2)
+            legal += forwards["legal"]
+            diagonals = [(-1, 1), (1, 1)]
+            for diagonal in diagonals:
+                attack = _linear_iteration(board, old_coords, *diagonal, limit = 1)
+                possible_capture += attack["possible_capture"]
+        if piece.color == PieceColor.BLACK:
+            # -y
+            forwards = _linear_iteration(board, old_coords, 0, -1,
+                                         limit = 1 if piece.has_moved else 2)
+            legal += forwards["legal"]
+            diagonals = [(-1, -1), (1, -1)]
+            for diagonal in diagonals:
+                attack = _linear_iteration(board, old_coords, *diagonal, limit = 1)
+                possible_capture += attack["possible_capture"]
 
     # TODO: Rook legal moves
     if piece.type == PieceType.ROOK:
@@ -284,7 +303,9 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     # TODO: Knight legal moves
     if piece.type == PieceType.KNIGHT:
         # Y'know, knight moves.
-        directions = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
+        # Limited to 1 space away
+        directions = [(1, 2), (2, 1), (2, -1), (1, -2), 
+                      (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
         for direction in directions:
             wards = _linear_iteration(board, old_coords, *direction, limit = 1)
             legal += wards["legal"]
@@ -312,6 +333,7 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     # TODO: King legal moves
     if piece.type == PieceType.KING:
         # Leftwards, Rightwards, Upwards, Downwards, SW, NW, NE, SE
+        # Limited to 1 space away
         directions = [(-1, 0), (1, 0), (0, 1), (0, -1),
                       (-1, -1), (-1, 1), (1, 1), (1, -1)]
         for direction in directions:
