@@ -7,9 +7,10 @@ TODO:
 - ~~SELF-CHECK detection in get_all_legal_moves~~
 - En Passant capturing
 - Castling
-- Checkmate detection
-- Win case (Game over screen)
+- ~~Checkmate detection~~
+- ~~Win case (Game over screen)~~
 - Make a dumb bot
+- Add a function to see which pieces you're allowed to move (for when you're restricted in CHECK)
 
 "Screenshot":
 ```
