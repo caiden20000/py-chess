@@ -536,6 +536,7 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         print_instructional_text()
         return False
 
+# Relies on get_all_legal_moves(), which currently doesn't account for CHECKs
 def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
     """Returns list of tuple pairs of coordinates representing every possible move for a player."""
     # Moves are Coords tuple pairs, eg (a4, b5)
@@ -550,6 +551,7 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
             all_moves.append((old_coords, new_coords))
     return all_moves
 
+# Relies on get_all_legal_moves(), which currently doesn't account for CHECKs
 def get_all_legal_inputs_for_player(board: Board, turn: PieceColor):
     """Returns list of every legal string input for a player."""
     all_inputs: list[str] = []
