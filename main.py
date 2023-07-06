@@ -599,7 +599,7 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         return False
 
 # Apparently a pinned piece CAN still check your king.
-def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
+def get_all_legal_moves_for_player(board: Board, turn: PieceColor, check_check: bool = False):
     """Returns list of tuple pairs of coordinates representing every possible move for a player."""
     # Moves are Coords tuple pairs, eg (a4, b5)
     all_moves: list[tuple[Coords]] = []
@@ -608,7 +608,7 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
         piece = board.get_piece(old_coords)
         if piece is None or piece.color != turn:
             continue
-        legal = get_all_legal_moves(board, old_coords, check_check=False)
+        legal = get_all_legal_moves(board, old_coords, check_check)
         for new_coords in legal:
             all_moves.append((old_coords, new_coords))
     return all_moves
@@ -616,16 +616,20 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
 # Relies on get_all_legal_moves(), which currently doesn't account for CHECKs
 def get_all_legal_inputs_for_player(board: Board, turn: PieceColor):
     """Returns list of every legal string input for a player."""
+    all_moves = get_all_legal_moves_for_player(board, turn, check_check=True)
     all_inputs: list[str] = []
-    for coords in board.pieces:
-        old_coords = coords_from_string(coords)
-        piece = board.get_piece(old_coords)
-        if piece is None or piece.color != turn:
-            continue
-        legal = get_all_legal_moves(board, old_coords, check_check=True)
-        for new_coords in legal:
-            input_str = f"{coords} to {new_coords.get_string()}"
-            all_inputs.append(input_str)
+    for moves in all_moves:
+        input_str = f"{moves[0].get_string()} to {moves[1].get_string()}"
+        all_inputs.append(input_str)
+    # for coords in board.pieces:
+    #     old_coords = coords_from_string(coords)
+    #     piece = board.get_piece(old_coords)
+    #     if piece is None or piece.color != turn:
+    #         continue
+    #     legal = get_all_legal_moves(board, old_coords, check_check=True)
+    #     for new_coords in legal:
+    #         input_str = f"{coords} to {new_coords.get_string()}"
+    #         all_inputs.append(input_str)
     return all_inputs
 
 # This function can probably be optimized heavily
@@ -641,6 +645,20 @@ def is_in_check(board: Board, color: PieceColor) -> bool:
         if piece.color == color and piece.type == PieceType.KING:
             return True
     return False
+
+def is_in_checkmate(board: Board, color: PieceColor) -> bool:
+    """Returns true if the given player is in checkmate."""
+    if not is_in_check(board, color):
+        return False
+    all_moves = get_all_legal_moves_for_player(board, color, check_check=True)
+    if len(all_moves) == 0:
+        return True
+    return False
+
+def print_win(color: PieceColor):
+    print("==== The game is won! ====")
+    print(f"{piece_color_to_str(color)} has checkmated {piece_color_to_str(swap_color(color))}!")
+    print("_______ GOOD GAME ________")
 
 def game():
     """Main game loop."""
@@ -666,6 +684,10 @@ def game():
         print("")
         input_result = handle_input(board, turn, user_input)
         if input_result is True:
+            if is_in_checkmate(board, swap_color(turn)):
+                print_win(turn)
+                exit_loop = True
+                break
             turn = swap_color(turn)
             print_board(board, turn)
             print_instructional_text()
