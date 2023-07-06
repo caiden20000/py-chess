@@ -603,7 +603,9 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor, check_check: 
     """Returns list of tuple pairs of coordinates representing every possible move for a player."""
     # Moves are Coords tuple pairs, eg (a4, b5)
     all_moves: list[tuple[Coords]] = []
-    for coords in board.pieces:
+    # Copy to avoid dict change during iteration err
+    pieces = board.pieces.copy()
+    for coords in pieces:
         old_coords = coords_from_string(coords)
         piece = board.get_piece(old_coords)
         if piece is None or piece.color != turn:
@@ -656,6 +658,7 @@ def is_in_checkmate(board: Board, color: PieceColor) -> bool:
     return False
 
 def print_win(color: PieceColor):
+    """Declares the winner!"""
     print("==== The game is won! ====")
     print(f"{piece_color_to_str(color)} has checkmated {piece_color_to_str(swap_color(color))}!")
     print("_______ GOOD GAME ________")
@@ -695,5 +698,24 @@ def game():
             # Move was unsuccessful
             print_instructional_text()
 
+# Fool's mate
+# f2 to f3
+# e7 to e5
+# g2 to g4
+# d8 to h4
 
 game()
+
+# Traceback (most recent call last):
+#   File "/workspaces/py-chess/main.py", line 705, in <module>
+#     game()
+#   File "/workspaces/py-chess/main.py", line 688, in game
+#     if is_in_checkmate(board, swap_color(turn)):
+#   File "/workspaces/py-chess/main.py", line 653, in is_in_checkmate
+#     all_moves = get_all_legal_moves_for_player(board, color, check_check=True)
+#   File "/workspaces/py-chess/main.py", line 606, in get_all_legal_moves_for_player
+#     for coords in board.pieces:
+# RuntimeError: dictionary changed size during iteration
+
+# Happens when a check occurs
+# Will fix by copying board then iterating through that instead.
