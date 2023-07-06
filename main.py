@@ -14,7 +14,7 @@ HEIGHT = 8
 CHECK_DETECTION = True
 CHECKMATE_DETECTION = False
 BOT = False
-UNICODE_PIECES = True
+UNICODE_PIECES = False
 
 
 class PieceColor(Enum):
@@ -306,16 +306,39 @@ def _linear_iteration(board: Board,
         counter += 1
     return {"legal": legal, "possible_capture": possible_capture}
 
-# TODO: Add CHECK prevention by de-listing SELF-CHECKING moves
-# Brute force way: For every move, execute the move,
-#                  evaluate the CHECK status, and undo the move.
-# Better way: if already in check:
-#               only simulate moves that enter attacking squares
-#               or capture enemy pieces
-#             if not in check:
-#               only simulate moves from pieces that are ALREADY attacked.
-#               (Assuming the only way to self-check is to unblock an attack)
-def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
+def would_move_check(board: Board, old: Coords, new: Coords):
+    """Simulates a move and returns True if the player is in check afterwards."""
+    temp_piece = board.get_piece(new)
+    moving_piece = board.get_piece(old)
+    color = moving_piece.color
+    result = False
+    board.move(old, new)
+    if is_in_check(board, color):
+        result = True
+    board.move(new, old)
+    board.set_piece(temp_piece, new)
+    return result
+
+# TODO: Improve the CHECK detection with optimization
+# if already in check:
+#   only simulate moves that enter attacking squares
+#   or capture enemy pieces
+# if not in check:
+#   only simulate moves from pieces that are ALREADY attacked.
+#   (Assuming the only way to self-check is to unblock an attack)
+def prune_check_moves(board: Board, old: Coords, legal: list[Coords], invert: bool = False) -> list[Coords]:
+    """Removes all moves that would leave you in CHECK."""
+    final: list[Coords] = []
+    for coords in legal:
+        if would_move_check(board, old, coords):
+            if invert:
+                final.append(coords)
+            continue
+        if not invert:
+            final.append(coords)
+    return final
+
+def get_all_legal_moves(board: Board, old_coords: Coords, check_check: bool = True) -> list[Coords]:
     """Returns a list of every legal move the piece at old_coords can make."""
     legal: list[Coords] = []
     possible_capture: list[Coords] = []
@@ -398,6 +421,10 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     for coords in possible_capture:
         if board.get_piece(coords).color != piece.color:
             legal.append(coords)
+    # Remove moves that put the player in CHECK
+    if check_check:
+        final = prune_check_moves(board, old_coords, legal)
+        return final
     return legal
 
 
@@ -464,6 +491,9 @@ def move(board: Board, move_str: str, turn: PieceColor) -> bool:
         if captured_piece is not None:
             capture(captured_piece)
         return True
+    elif would_move_check(board, *coords):
+        err_in_check()
+        return False
     else:
         err_illegal()
         return False
@@ -568,7 +598,7 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         print_instructional_text()
         return False
 
-# Relies on get_all_legal_moves(), which currently doesn't account for CHECKs
+# Apparently a pinned piece CAN still check your king.
 def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
     """Returns list of tuple pairs of coordinates representing every possible move for a player."""
     # Moves are Coords tuple pairs, eg (a4, b5)
@@ -578,7 +608,7 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
         piece = board.get_piece(old_coords)
         if piece is None or piece.color != turn:
             continue
-        legal = get_all_legal_moves(board, old_coords)
+        legal = get_all_legal_moves(board, old_coords, check_check=False)
         for new_coords in legal:
             all_moves.append((old_coords, new_coords))
     return all_moves
@@ -587,10 +617,15 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
 def get_all_legal_inputs_for_player(board: Board, turn: PieceColor):
     """Returns list of every legal string input for a player."""
     all_inputs: list[str] = []
-    all_moves = get_all_legal_moves_for_player(board, turn)
-    for moves in all_moves:
-        input_str = f"{moves[0].get_string()} to {moves[1].get_string()}"
-        all_inputs.append(input_str)
+    for coords in board.pieces:
+        old_coords = coords_from_string(coords)
+        piece = board.get_piece(old_coords)
+        if piece is None or piece.color != turn:
+            continue
+        legal = get_all_legal_moves(board, old_coords, check_check=True)
+        for new_coords in legal:
+            input_str = f"{coords} to {new_coords.get_string()}"
+            all_inputs.append(input_str)
     return all_inputs
 
 # This function can probably be optimized heavily
