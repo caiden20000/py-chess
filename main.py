@@ -14,6 +14,7 @@ HEIGHT = 8
 CHECK_DETECTION = True
 CHECKMATE_DETECTION = False
 BOT = False
+UNICODE_PIECES = True
 
 
 class PieceColor(Enum):
@@ -111,7 +112,38 @@ class Piece:
 
     def get_string(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
+        if UNICODE_PIECES:
+            return self.unicode_version()
         return self.color.value + self.type.value.upper() + self.color.value
+
+    def unicode_version(self) -> str:
+        """Returns the unicode representation of the chess piece."""
+        result = " "
+        if self.color == PieceColor.BLACK and self.type == PieceType.PAWN:
+            result += "♟"
+        if self.color == PieceColor.BLACK and self.type == PieceType.ROOK:
+            result += "♜"
+        if self.color == PieceColor.BLACK and self.type == PieceType.KNIGHT:
+            result += "♞"
+        if self.color == PieceColor.BLACK and self.type == PieceType.BISHOP:
+            result += "♝"
+        if self.color == PieceColor.BLACK and self.type == PieceType.QUEEN:
+            result += "♛"
+        if self.color == PieceColor.BLACK and self.type == PieceType.KING:
+            result += "♚"
+        if self.color == PieceColor.WHITE and self.type == PieceType.PAWN:
+            result += "♙"
+        if self.color == PieceColor.WHITE and self.type == PieceType.ROOK:
+            result += "♖"
+        if self.color == PieceColor.WHITE and self.type == PieceType.KNIGHT:
+            result += "♘"
+        if self.color == PieceColor.WHITE and self.type == PieceType.BISHOP:
+            result += "♗"
+        if self.color == PieceColor.WHITE and self.type == PieceType.QUEEN:
+            result += "♕"
+        if self.color == PieceColor.WHITE and self.type == PieceType.KING:
+            result += "♔"
+        return result + " "
 
 
 class Board:
