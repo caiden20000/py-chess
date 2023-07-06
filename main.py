@@ -10,10 +10,12 @@ import sys
 WIDTH = 8
 HEIGHT = 8
 
+
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
     BLACK = "b"
     WHITE = "w"
+
 
 class PieceType(Enum):
     """Enum to represent a chess piece type."""
@@ -24,6 +26,7 @@ class PieceType(Enum):
     QUEEN = "q"
     KING = "k"
 
+
 def piece_color_to_str(piece_color: PieceColor) -> str:
     """Get a user-friendly string from the PieceColor enum."""
     result = "UNKNOWN"
@@ -32,6 +35,7 @@ def piece_color_to_str(piece_color: PieceColor) -> str:
     if piece_color == PieceColor.WHITE:
         result = "White"
     return result
+
 
 def piece_type_to_str(piece_type: PieceType) -> str:
     """Get a user-friendly string from the PieceType enum."""
@@ -72,6 +76,7 @@ class Coords:
         """Returns a unique string to use as a key for the board dict."""
         return f"{self.x}:{self.y}"
 
+
 def coords_from_string(string: str) -> Coords | None:
     """Returns a coords object from the given string. Returns None if invalid."""
     letters = Coords.LETTERS
@@ -80,6 +85,7 @@ def coords_from_string(string: str) -> Coords | None:
         return None
     return Coords(letters.index(string[0]), numbers.index(string[1]))
 
+
 def coords_from_ints(x: int, y: int) -> Coords | None:
     """Returns a coords object from the given ints. Returns None if out of bounds."""
     oob = x < 0 or x > Coords.MAX_WIDTH or y < 0 or y > Coords.MAX_HEIGHT
@@ -87,8 +93,10 @@ def coords_from_ints(x: int, y: int) -> Coords | None:
         return None
     return Coords(x, y)
 
+
 class Piece:
     """Class to represent a chess piece."""
+
     def __init__(self, piece_type: PieceType, color: PieceColor):
         self.type = piece_type
         self.color = color
@@ -101,9 +109,10 @@ class Piece:
 
 class Board:
     """Class to represent a chess board."""
+
     def __init__(self):
         self.pieces: dict[Piece | None] = {}
-    
+
     def clear(self):
         """Reset the board."""
         self.pieces: dict[Piece | None] = {}
@@ -156,7 +165,7 @@ class Board:
             for x in range(WIDTH):
                 piece = self.get_piece(Coords(x, 7-y))
                 if highlight_list is not None and \
-                    _is_coords_in_list(Coords(x, 7-y), highlight_list):
+                        _is_coords_in_list(Coords(x, 7-y), highlight_list):
                     if piece is None:
                         result += "▒▒▒"
                     else:
@@ -233,7 +242,7 @@ def piece_exists_at(board: Board, coords: Coords) -> bool:
 
 def _linear_iteration(board: Board,
                       old_coords: Coords,
-                      dx: int, dy: int, 
+                      dx: int, dy: int,
                       limit: int = 50) -> dict[list[Coords]]:
     """Useful iteration tool for legal move generation."""
     legal: list[Coords] = []
@@ -258,13 +267,6 @@ def _linear_iteration(board: Board,
         counter += 1
     return {"legal": legal, "possible_capture": possible_capture}
 
-# How do we represent legal moves?
-# Loop add moves in a direction until we encounter a piece.
-# Add all empty spaces found to "legal" list, add all pieces to "possible_capture" list.
-#   For special pieces like the pawn, exceptions are made.
-# Add all spaces that contain enemy pieces from the "possible_capture" list to the "legal" list.
-# Return the legal list.
-
 
 def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     """Returns a list of every legal move the piece at old_coords can make."""
@@ -277,20 +279,22 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
         if piece.color == PieceColor.WHITE:
             # +y
             forwards = _linear_iteration(board, old_coords, 0, 1,
-                                         limit = 1 if piece.has_moved else 2)
+                                         limit=1 if piece.has_moved else 2)
             legal += forwards["legal"]
             diagonals = [(-1, 1), (1, 1)]
             for diagonal in diagonals:
-                attack = _linear_iteration(board, old_coords, *diagonal, limit = 1)
+                attack = _linear_iteration(
+                    board, old_coords, *diagonal, limit=1)
                 possible_capture += attack["possible_capture"]
         if piece.color == PieceColor.BLACK:
             # -y
             forwards = _linear_iteration(board, old_coords, 0, -1,
-                                         limit = 1 if piece.has_moved else 2)
+                                         limit=1 if piece.has_moved else 2)
             legal += forwards["legal"]
             diagonals = [(-1, -1), (1, -1)]
             for diagonal in diagonals:
-                attack = _linear_iteration(board, old_coords, *diagonal, limit = 1)
+                attack = _linear_iteration(
+                    board, old_coords, *diagonal, limit=1)
                 possible_capture += attack["possible_capture"]
 
     # TODO: Rook legal moves
@@ -306,10 +310,10 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
     if piece.type == PieceType.KNIGHT:
         # Y'know, knight moves.
         # Limited to 1 space away
-        directions = [(1, 2), (2, 1), (2, -1), (1, -2), 
+        directions = [(1, 2), (2, 1), (2, -1), (1, -2),
                       (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
         for direction in directions:
-            wards = _linear_iteration(board, old_coords, *direction, limit = 1)
+            wards = _linear_iteration(board, old_coords, *direction, limit=1)
             legal += wards["legal"]
             possible_capture += wards["possible_capture"]
 
@@ -339,7 +343,7 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
         directions = [(-1, 0), (1, 0), (0, 1), (0, -1),
                       (-1, -1), (-1, 1), (1, 1), (1, -1)]
         for direction in directions:
-            wards = _linear_iteration(board, old_coords, *direction, limit = 1)
+            wards = _linear_iteration(board, old_coords, *direction, limit=1)
             legal += wards["legal"]
             possible_capture += wards["possible_capture"]
 
@@ -349,11 +353,13 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
             legal.append(coords)
     return legal
 
+
 def _is_coords_in_list(coords: Coords, li: list[Coords]) -> bool:
     for c in li:
         if coords.x == c.x and coords.y == c.y:
             return True
     return False
+
 
 def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
     """Returns true if new_coords is in the list of all legal moves for the piece at old_coords."""
@@ -367,6 +373,7 @@ def capture(captured_piece: Piece):
     print(f"!!! {capturer} captured a {piece_type_to_str(captured_piece.type)}!")
     # TODO: Some points logic here
 
+
 def list_legal_moves(board: Board, coords: Coords) -> str:
     """Returns a formatted list of every legal move for the piece at the given coords."""
     all_moves = get_all_legal_moves(board, coords)
@@ -376,6 +383,7 @@ def list_legal_moves(board: Board, coords: Coords) -> str:
             result_str += ", "
         result_str += c.get_string()
     return result_str
+
 
 def visualize_legal_moves(board: Board, coords: Coords) -> str:
     """Prints the legal moves on top of the board."""
@@ -407,27 +415,33 @@ def move(board: Board, move_str: str, turn: PieceColor) -> bool:
         err_illegal()
         return False
 
+
 def err_no_piece(coords: Coords):
     """Err msg for "no piece" errors"""
     print("There is no piece at " + coords.get_string() + "!")
+
 
 def err_illegal():
     """Err msg for "illegal move" errors"""
     print("You cannot move there! Try listing the legal moves for that piece.")
 
+
 def err_bad_coords():
     """Err msg for "bad coords" errors"""
     print("The coordinates are incorrectly formatted!")
 
+
 def err_wrong_turn(turn: PieceColor):
     """Err msg for "wrong turn" errors"""
-    print(f"That piece doesn't belong to you! It's {piece_color_to_str(turn)}'s turn!")
+    print(
+        f"That piece doesn't belong to you! It's {piece_color_to_str(turn)}'s turn!")
 
 
 def print_turn(turn: PieceColor):
     """Prints out a string indicating who's turn it is."""
     result = f"=========== {piece_color_to_str(turn)}'s Turn! ==========="
     print(result)
+
 
 def print_instructional_text():
     """Prints out a generic string listing options."""
@@ -438,6 +452,7 @@ def print_instructional_text():
     result += "| Type 'quit' to exit the program.\n"
     print(result)
 
+
 def print_legal_moves(board: Board, coords: Coords):
     """Prints out a legal move list, as well as a visual diagram."""
     piece = board.get_piece(coords)
@@ -447,13 +462,16 @@ def print_legal_moves(board: Board, coords: Coords):
         return
     # There is a piece at the coordinates, give the information for that piece:
     print("\n" + visualize_legal_moves(board, coords))
-    print(f"| The legal moves for the {piece_type_to_str(piece.type)} at {coords.get_string()} are: ")
+    print(
+        f"| The legal moves for the {piece_type_to_str(piece.type)} at {coords.get_string()} are: ")
     print("| " + list_legal_moves(board, coords) + "\n")
+
 
 def print_board(board: Board, turn: PieceColor):
     """Print the current board state and who's turn it is."""
     print("\n" + board.get_string(True) + "")
     print_turn(turn)
+
 
 def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
     """Returns True if a move was committed without error."""
@@ -494,6 +512,7 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         print_instructional_text()
         return False
 
+
 def game():
     """Main game loop."""
     board = Board()
@@ -512,14 +531,12 @@ def game():
         print("")
         input_result = handle_input(board, turn, user_input)
         if input_result is True:
-            # A move was successful
-            # Swap turns
             turn = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
-            # Print out the new board, and information text
             print_board(board, turn)
             print_instructional_text()
         else:
             # Move was unsuccessful
             print_instructional_text()
+
 
 game()
