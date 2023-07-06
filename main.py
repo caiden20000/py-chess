@@ -541,10 +541,10 @@ def get_all_legal_moves_for_player(board: Board, turn: PieceColor):
     # Moves are Coords tuple pairs, eg (a4, b5)
     all_moves: list[tuple[Coords]] = []
     for coords in board.pieces:
-        piece = board.get_piece(coords)
+        old_coords = coords_from_string(coords)
+        piece = board.get_piece(old_coords)
         if piece is None or piece.color != turn:
             continue
-        old_coords = coords_from_string(coords)
         legal = get_all_legal_moves(board, old_coords)
         for new_coords in legal:
             all_moves.append((old_coords, new_coords))
