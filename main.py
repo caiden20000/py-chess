@@ -1,18 +1,19 @@
 from enum import Enum
 import sys
 
+# TODO: En Passant
+# TODO: Castling
+# TODO: Checkmate (That's dumb. Just take the King. TAKE IT. It's DUM-
+
 # Chess board is from a1 to h8
 # Inner coords replace letter with number: 00 to 77
-
 WIDTH = 8
 HEIGHT = 8
-
 
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
     BLACK = "b"
     WHITE = "w"
-
 
 class PieceType(Enum):
     """Enum to represent a chess piece type."""
@@ -23,129 +24,123 @@ class PieceType(Enum):
     QUEEN = "q"
     KING = "k"
 
-
 def piece_color_to_str(piece_color: PieceColor) -> str:
     """Get a user-friendly string from the PieceColor enum."""
+    result = "UNKNOWN"
     if piece_color == PieceColor.BLACK:
-        return "Black"
+        result = "Black"
     if piece_color == PieceColor.WHITE:
-        return "White"
-    return "UNKNOWN"
-
+        result = "White"
+    return result
 
 def piece_type_to_str(piece_type: PieceType) -> str:
     """Get a user-friendly string from the PieceType enum."""
+    result = "UNKNOWN"
     if piece_type == PieceType.PAWN:
-        return "Pawn"
+        result = "Pawn"
     if piece_type == PieceType.ROOK:
-        return "Rook"
+        result = "Rook"
     if piece_type == PieceType.KNIGHT:
-        return "Knight"
+        result = "Knight"
     if piece_type == PieceType.BISHOP:
-        return "Bishop"
+        result = "Bishop"
     if piece_type == PieceType.QUEEN:
-        return "Queen"
+        result = "Queen"
     if piece_type == PieceType.KING:
-        return "King"
-    return "UNKNOWN"
+        result = "King"
+    return result
 
 
 class Coords:
     """Object to represent a position on a chess board."""
+    LETTERS = "abcdefgh"
+    NUMBERS = "12345678"
     MIN_WIDTH = 0
     MAX_WIDTH = 7
     MIN_HEIGHT = 0
     MAX_HEIGHT = 7
-    LETTERS = "abcdefgh"
-    NUMBERS = "12345678"
 
-    def __init__(self, x: int = 0, y: int = 0, string: str = ""):
-        if string == "":
-            self.x = x
-            self.y = y
-            self.out_of_bounds(raise_err=True)
-        else:
-            self.set_by_string(string)
-
-    @staticmethod
-    def validate_str(coords: str, raise_err: bool = False) -> bool:
-        """Returns true if coord string is valid. EG. e1 is valid, w9 is not."""
-        if len(coords) != 2 or coords[0] not in Coords.LETTERS or coords[1] not in Coords.NUMBERS:
-            if raise_err:
-                raise ValueError(
-                    "The given coordinates are not valid! Given: " + coords)
-            return False
-        return True
-
-    def out_of_bounds(self, raise_err: bool = False) -> bool:
-        oob = self.x < self.MIN_WIDTH \
-            or self.x > self.MAX_WIDTH \
-            or self.y < self.MIN_HEIGHT \
-            or self.y > self.MAX_HEIGHT
-        if oob and raise_err:
-            raise ValueError(
-                f"Coordinates out of bounds! Given: ({self.x}, {self.y})")
-        return oob
+    def __init__(self, x: int = 0, y: int = 0):
+        self.x = x
+        self.y = y
 
     def get_string(self) -> str:
+        """Returns a human readable string that represents the coordinates."""
         return Coords.LETTERS[self.x] + Coords.NUMBERS[self.y]
 
-    def set_by_string(self, string):
-        self.validate_str(string, raise_err=True)
-        self.x = Coords.LETTERS.index(string[0])
-        self.y = Coords.NUMBERS.index(string[1])
-
     def to_board_key(self):
+        """Returns a unique string to use as a key for the board dict."""
         return f"{self.x}:{self.y}"
 
+def coords_from_string(string: str) -> Coords | None:
+    """Returns a coords object from the given string. Returns None if invalid."""
+    letters = Coords.LETTERS
+    numbers = Coords.NUMBERS
+    if len(string) != 2 or string[0] not in letters or string[1] not in numbers:
+        return None
+    return Coords(letters.index(string[0]), numbers.index(string[1]))
+
+def coords_from_ints(x: int, y: int) -> Coords | None:
+    """Returns a coords object from the given ints. Returns None if out of bounds."""
+    oob = x < 0 or x > Coords.MAX_WIDTH or y < 0 or y > Coords.MAX_HEIGHT
+    if oob:
+        return None
+    return Coords(x, y)
 
 class Piece:
     """Class to represent a chess piece."""
-
-    def __init__(self, piece_type: PieceType, color: PieceColor, coords: Coords):
+    def __init__(self, piece_type: PieceType, color: PieceColor):
         self.type = piece_type
         self.color = color
-        self.coords = coords
         self.has_moved = False
 
-    def stringify(self) -> str:
+    def get_string(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
         return self.color.value + self.type.value.upper() + self.color.value
 
 
 class Board:
     """Class to represent a chess board."""
-
     def __init__(self):
+        self.pieces: dict[Piece | None] = {}
+    
+    def clear(self):
+        """Reset the board."""
         self.pieces: dict[Piece | None] = {}
 
     def get_piece(self, coords: Coords) -> Piece | None:
+        """Returns the piece at a given coords. Returns None if no piece exists."""
         try:
             return self.pieces[coords.to_board_key()]
         except KeyError:
             return None
 
-    def set_piece(self, piece: Piece):
-        self.pieces[piece.coords.to_board_key()] = piece
+    def set_piece(self, piece: Piece, coords: Coords):
+        """Sets a piece at a given coords."""
+        self.pieces[coords.to_board_key()] = piece
 
     def remove_piece(self, coords: Coords):
-        self.pieces[coords] = None
-
-    def move_piece(self, piece: Piece, new_coords: Coords):
-        self.pieces[piece.coords.to_board_key()] = None
-        piece.coords = new_coords
-        if piece.has_moved is False:
-            piece.has_moved = True
-        self.set_piece(piece)
+        """Erases any piece at the given coords."""
+        self.pieces[coords.to_board_key()] = None
 
     def move(self, old_coords: Coords, new_coords: Coords) -> bool:
+        """Moves a piece from old_coords to new_coords. Returns True if successful."""
         piece = self.get_piece(old_coords)
         if piece is None:
+            err_no_piece(old_coords)
             return False
-        self.move_piece(piece, new_coords)
+        if piece.has_moved is False:
+            piece.has_moved = True
+        self.remove_piece(old_coords)
+        self.set_piece(piece, new_coords)
         return True
 
-    def stringify(self, show_coords: bool = False, show_coords_list: list[Coords] | None = None):
+    def get_string(self, show_coords: bool = False, highlight_list: list[Coords] | None = None):
+        """
+        Returns the board in ASCII "art" fashion.
+        show_coords bool controls whether or not the 'a b c d ...' (& numbers) are shown.
+        highlight_list is a list of coordines to replace with a block string.
+        """
         # letters_coords = ' '*4 + ''.join([l + " "*3 for l in 'abcdefgh'])
         # letters_coords = ' '*4 + '   '.join('abcdefgh')
         letters_coords = "    a   b   c   d   e   f   g   h  "
@@ -159,15 +154,18 @@ class Board:
                 result += str(8-y) + " "
             result += "|"
             for x in range(WIDTH):
-                if show_coords_list is not None and \
-                    _is_coords_in_list(Coords(x, 7-y), show_coords_list):
-                    result += "###"
+                piece = self.get_piece(Coords(x, 7-y))
+                if highlight_list is not None and \
+                    _is_coords_in_list(Coords(x, 7-y), highlight_list):
+                    if piece is None:
+                        result += "▒▒▒"
+                    else:
+                        result += f"▓{piece.get_string()[1]}▓"
                 else:
-                    piece = self.get_piece(Coords(x, 7-y))
                     if piece is None:
                         result += "   "
                     else:
-                        result += self.get_piece(Coords(x, 7-y)).stringify()
+                        result += piece.get_string()
                 result += "|"
             if show_coords:
                 result += " " + str(8-y)
@@ -180,49 +178,47 @@ class Board:
         return result
 
     def standard_board_setup(self):
+        """Sets up the board with all new pieces, in correct chess positions."""
+        self.clear()
+        # Pawns
         for x in range(WIDTH):
             self.set_piece(
-                Piece(PieceType.PAWN, PieceColor.WHITE, Coords(x, 1)))
+                Piece(PieceType.PAWN, PieceColor.WHITE), Coords(x, 1))
             self.set_piece(
-                Piece(PieceType.PAWN, PieceColor.BLACK, Coords(x, 6)))
+                Piece(PieceType.PAWN, PieceColor.BLACK), Coords(x, 6))
         # White side
-        self.set_piece(Piece(PieceType.ROOK, PieceColor.WHITE, Coords(0, 0)))
-        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE, Coords(1, 0)))
-        self.set_piece(Piece(PieceType.BISHOP, PieceColor.WHITE, Coords(2, 0)))
-        self.set_piece(Piece(PieceType.QUEEN, PieceColor.WHITE, Coords(3, 0)))
-        self.set_piece(Piece(PieceType.KING, PieceColor.WHITE, Coords(4, 0)))
-        self.set_piece(Piece(PieceType.BISHOP, PieceColor.WHITE, Coords(5, 0)))
-        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE, Coords(6, 0)))
-        self.set_piece(Piece(PieceType.ROOK, PieceColor.WHITE, Coords(7, 0)))
+        self.set_piece(Piece(PieceType.ROOK, PieceColor.WHITE), Coords(0, 0))
+        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE), Coords(1, 0))
+        self.set_piece(Piece(PieceType.BISHOP, PieceColor.WHITE), Coords(2, 0))
+        self.set_piece(Piece(PieceType.QUEEN, PieceColor.WHITE), Coords(3, 0))
+        self.set_piece(Piece(PieceType.KING, PieceColor.WHITE), Coords(4, 0))
+        self.set_piece(Piece(PieceType.BISHOP, PieceColor.WHITE), Coords(5, 0))
+        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.WHITE), Coords(6, 0))
+        self.set_piece(Piece(PieceType.ROOK, PieceColor.WHITE), Coords(7, 0))
         # Black side
-        self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK, Coords(0, 7)))
-        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK, Coords(1, 7)))
-        self.set_piece(Piece(PieceType.BISHOP, PieceColor.BLACK, Coords(2, 7)))
-        self.set_piece(Piece(PieceType.QUEEN, PieceColor.BLACK, Coords(3, 7)))
-        self.set_piece(Piece(PieceType.KING, PieceColor.BLACK, Coords(4, 7)))
-        self.set_piece(Piece(PieceType.BISHOP, PieceColor.BLACK, Coords(5, 7)))
-        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK, Coords(6, 7)))
-        self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK, Coords(7, 7)))
-
-# Accepts input in xy-xy format. (source-destination)
+        self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK), Coords(0, 7))
+        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK), Coords(1, 7))
+        self.set_piece(Piece(PieceType.BISHOP, PieceColor.BLACK), Coords(2, 7))
+        self.set_piece(Piece(PieceType.QUEEN, PieceColor.BLACK), Coords(3, 7))
+        self.set_piece(Piece(PieceType.KING, PieceColor.BLACK), Coords(4, 7))
+        self.set_piece(Piece(PieceType.BISHOP, PieceColor.BLACK), Coords(5, 7))
+        self.set_piece(Piece(PieceType.KNIGHT, PieceColor.BLACK), Coords(6, 7))
+        self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK), Coords(7, 7))
 
 
-def parse_move(move_str: str, delimiter: str = " to ") -> tuple[Coords]:
-    """Parses moves in 'xy to xy' format. Returns tuple pair of Coords."""
+def parse_move(move_str: str, delimiter: str = " to ") -> tuple[Coords] | None:
+    """Parses moves in 'xy to xy' format. Returns tuple pair of Coords. Returns None if err."""
     if len(move_str) != len("xx" + delimiter + "yy"):
-        raise ValueError(
-            "Incorrect string length for move. Given: " + move_str)
+        return None
     coords = move_str.split(delimiter)
     if len(coords) != 2:
-        raise ValueError("Incorrectly delimited! Given: " + move_str)
-    if not Coords.validate_str(coords[0]):
-        raise ValueError(
-            "First coordinate formatting error. Given: " + coords[0])
-    if not Coords.validate_str(coords[1]):
-        raise ValueError(
-            "Second coordinate formatting error. Given: " + coords[1])
+        return None
+    first_coords = coords_from_string(coords[0])
+    second_coords = coords_from_string(coords[1])
+    if first_coords is None or second_coords is None:
+        return None
     # String parsing done, convert coords for internal use
-    return (Coords(string=coords[0]), Coords(string=coords[1]))
+    return (first_coords, second_coords)
 
 
 def out_of_bounds(x: int, y: int) -> bool:
@@ -235,10 +231,11 @@ def piece_exists_at(board: Board, coords: Coords) -> bool:
     return board.get_piece(coords) is not None
 
 
-def _linear_iteration(board: Board, 
-                      old_coords: Coords, 
+def _linear_iteration(board: Board,
+                      old_coords: Coords,
                       dx: int, dy: int, 
                       limit: int = 50) -> dict[list[Coords]]:
+    """Useful iteration tool for legal move generation."""
     legal: list[Coords] = []
     possible_capture: list[Coords] = []
     x, y = old_coords.x, old_coords.y
@@ -371,6 +368,7 @@ def capture(captured_piece: Piece):
     # TODO: Some points logic here
 
 def list_legal_moves(board: Board, coords: Coords) -> str:
+    """Returns a formatted list of every legal move for the piece at the given coords."""
     all_moves = get_all_legal_moves(board, coords)
     result_str = ""
     for c in all_moves:
@@ -379,17 +377,25 @@ def list_legal_moves(board: Board, coords: Coords) -> str:
         result_str += c.get_string()
     return result_str
 
-def show_legal_moves(board: Board, coords: Coords) -> str:
+def visualize_legal_moves(board: Board, coords: Coords) -> str:
+    """Prints the legal moves on top of the board."""
     all_moves = get_all_legal_moves(board, coords)
-    board_str = board.stringify(True, all_moves)
+    board_str = board.get_string(True, all_moves)
     return board_str
 
 
 def move(board: Board, move_str: str, turn: PieceColor) -> bool:
     """Executes a move based on a valid move string."""
     coords = parse_move(move_str)
-    if board.get_piece(coords[0]).color != turn:
-        print("That piece doesn't belong to you!")
+    if coords is None:
+        err_bad_coords()
+        return False
+    piece = board.get_piece(coords[0])
+    if piece is None:
+        err_no_piece(coords[0])
+        return False
+    if piece.color != turn:
+        err_wrong_turn(turn)
         return False
     if is_move_legal(board, *coords):
         captured_piece = board.get_piece(coords[1])
@@ -397,14 +403,34 @@ def move(board: Board, move_str: str, turn: PieceColor) -> bool:
             capture(captured_piece)
         board.move(*coords)
         return True
-    print("That move is not legal!")
-    return False
+    else:
+        err_illegal()
+        return False
+
+def err_no_piece(coords: Coords):
+    """Err msg for "no piece" errors"""
+    print("There is no piece at " + coords.get_string() + "!")
+
+def err_illegal():
+    """Err msg for "illegal move" errors"""
+    print("You cannot move there! Try listing the legal moves for that piece.")
+
+def err_bad_coords():
+    """Err msg for "bad coords" errors"""
+    print("The coordinates are incorrectly formatted!")
+
+def err_wrong_turn(turn: PieceColor):
+    """Err msg for "wrong turn" errors"""
+    print(f"That piece doesn't belong to you! It's {piece_color_to_str(turn)}'s turn!")
+
 
 def print_turn(turn: PieceColor):
+    """Prints out a string indicating who's turn it is."""
     result = f"=== {piece_color_to_str(turn)}'s Turn! ===\n"
     print(result)
 
 def print_instructional_text():
+    """Prints out a generic string listing options."""
     result = ""
     result += "| Type 'xx to yy' to move a piece.\n"
     result += "| Type 'xx' to see all available moves.\n"
@@ -412,12 +438,14 @@ def print_instructional_text():
     print(result)
 
 def print_legal_moves(board: Board, coords: Coords):
+    """Prints out a legal move list, as well as a visual diagram."""
     piece = board.get_piece(coords)
     # If there is no piece at the given coordinates, the request is invalid
     if piece is None:
-        print("There is no piece at " + coords.get_string() + "!")
+        err_no_piece(coords)
+        return
     # There is a piece at the coordinates, give the information for that piece:
-    print("\n" + show_legal_moves(board, coords))
+    print("\n" + visualize_legal_moves(board, coords))
     print(f"| The legal moves for the {piece_type_to_str(piece.type)} at {coords.get_string()} are: ")
     print("| " + list_legal_moves(board, coords))
 
@@ -426,22 +454,17 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
     try:
         # If the string is of the form "xx to yy", it is a move
         if len(user_input) == len("xx to yy"):
-            # If the move is invalid, return False
             if not move(board, user_input, turn):
                 return False
-            # If the move was valid, return True
             return True
 
         # If the string is of the form "xx" then it is a legal move query
         elif len(user_input) == len("xx"):
-            # If the coordinates are an unrecognized format, raise a ValueError
-            if not Coords.validate_str(user_input):
-                raise ValueError(
-                    "Coordinate formatting error. Given: " + user_input)
-            # The coordinates are a valid coordinate string which means it is IN BOUNDS
-            coords = Coords(string = user_input)
+            coords = coords_from_string(user_input)
+            if coords is None:
+                err_bad_coords()
+                return False
             print_legal_moves(board, coords)
-            # No move was made, so return false
             return False
 
         # If the string is in this list of exiting strings, quit the program
@@ -465,7 +488,7 @@ def game():
     """Main game loop."""
     board = Board()
     board.standard_board_setup()
-    print(board.stringify(True))
+    print(board.get_string(True))
 
     turn = PieceColor.WHITE
     exit_loop = False
@@ -476,13 +499,14 @@ def game():
         print("> ", end="")
         # Read input until newline
         user_input = input()
+        print("")
         input_result = handle_input(board, turn, user_input)
         if input_result is True:
             # A move was successful
             # Swap turns
             turn = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
             # Print out the new board, and information text
-            print("\n\n" + board.stringify(True) + "\n")
+            print("\n\n" + board.get_string(True) + "\n")
             print_turn(turn)
             print_instructional_text()
         else:
