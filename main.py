@@ -1,4 +1,5 @@
 from enum import Enum
+import sys
 
 # Chess board is from a1 to h8
 # Inner coords replace letter with number: 00 to 77
@@ -144,7 +145,7 @@ class Board:
         self.move_piece(piece, new_coords)
         return True
 
-    def stringify(self, show_coords: bool = False):
+    def stringify(self, show_coords: bool = False, show_coords_list: list[Coords] | None = None):
         # letters_coords = ' '*4 + ''.join([l + " "*3 for l in 'abcdefgh'])
         # letters_coords = ' '*4 + '   '.join('abcdefgh')
         letters_coords = "    a   b   c   d   e   f   g   h  "
@@ -158,11 +159,15 @@ class Board:
                 result += str(8-y) + " "
             result += "|"
             for x in range(WIDTH):
-                piece = self.get_piece(Coords(x, 7-y))
-                if piece is None:
-                    result += "   "
+                if show_coords_list is not None and \
+                    _is_coords_in_list(Coords(x, 7-y), show_coords_list):
+                    result += "###"
                 else:
-                    result += self.get_piece(Coords(x, 7-y)).stringify()
+                    piece = self.get_piece(Coords(x, 7-y))
+                    if piece is None:
+                        result += "   "
+                    else:
+                        result += self.get_piece(Coords(x, 7-y)).stringify()
                 result += "|"
             if show_coords:
                 result += " " + str(8-y)
@@ -202,12 +207,12 @@ class Board:
 # Accepts input in xy-xy format. (source-destination)
 
 
-def parse_move(move_str: str) -> tuple[Coords]:
-    """Parses moves in 'xy-xy' format. Returns tuple pair of Coords."""
-    if len(move_str) != 5:
+def parse_move(move_str: str, delimiter: str = " to ") -> tuple[Coords]:
+    """Parses moves in 'xy to xy' format. Returns tuple pair of Coords."""
+    if len(move_str) != len("xx" + delimiter + "yy"):
         raise ValueError(
             "Incorrect string length for move. Given: " + move_str)
-    coords = move_str.split("-")
+    coords = move_str.split(delimiter)
     if len(coords) != 2:
         raise ValueError("Incorrectly delimited! Given: " + move_str)
     if not Coords.validate_str(coords[0]):
@@ -347,10 +352,16 @@ def get_all_legal_moves(board: Board, old_coords: Coords) -> list[Coords]:
             legal.append(coords)
     return legal
 
+def _is_coords_in_list(coords: Coords, li: list[Coords]) -> bool:
+    for c in li:
+        if coords.x == c.x and coords.y == c.y:
+            return True
+    return False
 
 def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
     """Returns true if new_coords is in the list of all legal moves for the piece at old_coords."""
-    return new_coords in get_all_legal_moves(board, old_coords)
+    all_legal_moves = get_all_legal_moves(board, old_coords)
+    return _is_coords_in_list(new_coords, all_legal_moves)
 
 
 def capture(captured_piece: Piece):
@@ -359,17 +370,96 @@ def capture(captured_piece: Piece):
     print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
     # TODO: Some points logic here
 
+def list_legal_moves(board: Board, coords: Coords) -> str:
+    all_moves = get_all_legal_moves(board, coords)
+    result_str = ""
+    for c in all_moves:
+        if result_str != "":
+            result_str += ", "
+        result_str += c.get_string()
+    return result_str
 
-def move(board: Board, move_str: str):
+def show_legal_moves(board: Board, coords: Coords) -> str:
+    all_moves = get_all_legal_moves(board, coords)
+    board_str = board.stringify(True, all_moves)
+    return board_str
+
+
+def move(board: Board, move_str: str, turn: PieceColor) -> bool:
     """Executes a move based on a valid move string."""
     coords = parse_move(move_str)
+    if board.get_piece(coords[0]).color != turn:
+        print("That piece doesn't belong to you!")
+        return False
     if is_move_legal(board, *coords):
         captured_piece = board.get_piece(coords[1])
         if captured_piece is not None:
-            # Capture
             capture(captured_piece)
         board.move(*coords)
+        return True
+    print("That move is not legal!")
+    return False
 
+def print_turn(turn: PieceColor):
+    result = f"=== {piece_color_to_str(turn)}'s Turn! ===\n"
+    print(result)
+
+def print_instructional_text():
+    result = ""
+    result += "| Type 'xx to yy' to move a piece.\n"
+    result += "| Type 'xx' to see all available moves.\n"
+    result += "| Type 'quit' to exit the program.\n"
+    print(result)
+
+def print_legal_moves(board: Board, coords: Coords):
+    piece = board.get_piece(coords)
+    # If there is no piece at the given coordinates, the request is invalid
+    if piece is None:
+        print("There is no piece at " + coords.get_string() + "!")
+    # There is a piece at the coordinates, give the information for that piece:
+    print("\n" + show_legal_moves(board, coords))
+    print(f"| The legal moves for the {piece_type_to_str(piece.type)} at {coords.get_string()} are: ")
+    print("| " + list_legal_moves(board, coords))
+
+def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
+    """Returns True if a move was committed without error."""
+    try:
+        # If the string is of the form "xx to yy", it is a move
+        if len(user_input) == len("xx to yy"):
+            # If the move is invalid, return False
+            if not move(board, user_input, turn):
+                return False
+            # If the move was valid, return True
+            return True
+
+        # If the string is of the form "xx" then it is a legal move query
+        elif len(user_input) == len("xx"):
+            # If the coordinates are an unrecognized format, raise a ValueError
+            if not Coords.validate_str(user_input):
+                raise ValueError(
+                    "Coordinate formatting error. Given: " + user_input)
+            # The coordinates are a valid coordinate string which means it is IN BOUNDS
+            coords = Coords(string = user_input)
+            print_legal_moves(board, coords)
+            # No move was made, so return false
+            return False
+
+        # If the string is in this list of exiting strings, quit the program
+        elif user_input in ["quit", "exit", "stop"]:
+            print("| Quitting program...")
+            sys.exit()
+
+        # The string matched none of the previous checks, bad input
+        else:
+            print("!!! Unrecognized input, try again:\n")
+            print_instructional_text()
+
+    # Any error raised is a sign of a failure
+    except (KeyError, ValueError) as ex:
+        print(ex)
+        print("!!! Input error, try again:\n")
+        print_instructional_text()
+        return False
 
 def game():
     """Main game loop."""
@@ -377,12 +467,26 @@ def game():
     board.standard_board_setup()
     print(board.stringify(True))
 
+    turn = PieceColor.WHITE
     exit_loop = False
+    print_turn(turn)
+    print_instructional_text()
     while exit_loop is False:
+        # User input prefix
+        print("> ", end="")
+        # Read input until newline
         user_input = input()
-        try:
-            move(board, user_input)
-        except KeyError:
-            print("Input error, try again:\n")
-        else:
+        input_result = handle_input(board, turn, user_input)
+        if input_result is True:
+            # A move was successful
+            # Swap turns
+            turn = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
+            # Print out the new board, and information text
             print("\n\n" + board.stringify(True) + "\n")
+            print_turn(turn)
+            print_instructional_text()
+        else:
+            # Move was unsuccessful
+            print_instructional_text()
+
+game()
