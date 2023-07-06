@@ -361,13 +361,10 @@ def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
     return _is_coords_in_list(new_coords, all_legal_moves)
 
 
-capture_msg = ""
 def capture(captured_piece: Piece):
     """Called when a piece is captured. Responsible only for points distribution and notification."""
     capturer = "BLACK" if captured_piece.color == PieceColor.WHITE else "WHITE"
-    # print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
-    global capture_msg
-    capture_msg = f"!!! {capturer} captured a {piece_type_to_str(captured_piece.type)}!\n"
+    print(f"!!! {capturer} captured a {piece_type_to_str(captured_piece.type)}!")
     # TODO: Some points logic here
 
 def list_legal_moves(board: Board, coords: Coords) -> str:
@@ -504,7 +501,6 @@ def game():
     print(board.get_string(True))
 
     turn = PieceColor.WHITE
-    global capture_msg
     exit_loop = False
     print_turn(turn)
     print_instructional_text()
@@ -521,9 +517,6 @@ def game():
             turn = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
             # Print out the new board, and information text
             print_board(board, turn)
-            if capture_msg != "":
-                print(capture_msg)
-                capture_msg = ""
             print_instructional_text()
         else:
             # Move was unsuccessful
