@@ -361,10 +361,13 @@ def is_move_legal(board: Board, old_coords: Coords, new_coords: Coords) -> bool:
     return _is_coords_in_list(new_coords, all_legal_moves)
 
 
+capture_msg = ""
 def capture(captured_piece: Piece):
     """Called when a piece is captured. Responsible only for points distribution and notification."""
     capturer = "BLACK" if captured_piece.color == PieceColor.WHITE else "WHITE"
-    print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
+    # print(f"{capturer} captured a {piece_type_to_str(captured_piece.type)}!\n")
+    global capture_msg
+    capture_msg = f"!!! {capturer} captured a {piece_type_to_str(captured_piece.type)}!\n"
     # TODO: Some points logic here
 
 def list_legal_moves(board: Board, coords: Coords) -> str:
@@ -426,7 +429,7 @@ def err_wrong_turn(turn: PieceColor):
 
 def print_turn(turn: PieceColor):
     """Prints out a string indicating who's turn it is."""
-    result = f"=== {piece_color_to_str(turn)}'s Turn! ===\n"
+    result = f"=========== {piece_color_to_str(turn)}'s Turn! ==========="
     print(result)
 
 def print_instructional_text():
@@ -434,6 +437,7 @@ def print_instructional_text():
     result = ""
     result += "| Type 'xx to yy' to move a piece.\n"
     result += "| Type 'xx' to see all available moves.\n"
+    result += "| Type 'board' to reprint the board.\n"
     result += "| Type 'quit' to exit the program.\n"
     print(result)
 
@@ -447,7 +451,12 @@ def print_legal_moves(board: Board, coords: Coords):
     # There is a piece at the coordinates, give the information for that piece:
     print("\n" + visualize_legal_moves(board, coords))
     print(f"| The legal moves for the {piece_type_to_str(piece.type)} at {coords.get_string()} are: ")
-    print("| " + list_legal_moves(board, coords))
+    print("| " + list_legal_moves(board, coords) + "\n")
+
+def print_board(board: Board, turn: PieceColor):
+    """Print the current board state and who's turn it is."""
+    print("\n" + board.get_string(True) + "")
+    print_turn(turn)
 
 def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
     """Returns True if a move was committed without error."""
@@ -472,6 +481,10 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
             print("| Quitting program...")
             sys.exit()
 
+        elif user_input == "board":
+            print_board(board, turn)
+            return False
+
         # The string matched none of the previous checks, bad input
         else:
             print("!!! Unrecognized input, try again:\n")
@@ -491,6 +504,7 @@ def game():
     print(board.get_string(True))
 
     turn = PieceColor.WHITE
+    global capture_msg
     exit_loop = False
     print_turn(turn)
     print_instructional_text()
@@ -506,8 +520,10 @@ def game():
             # Swap turns
             turn = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
             # Print out the new board, and information text
-            print("\n\n" + board.get_string(True) + "\n")
-            print_turn(turn)
+            print_board(board, turn)
+            if capture_msg != "":
+                print(capture_msg)
+                capture_msg = ""
             print_instructional_text()
         else:
             # Move was unsuccessful
