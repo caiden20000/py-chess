@@ -688,6 +688,7 @@ def game():
         input_result = handle_input(board, turn, user_input)
         if input_result is True:
             if is_in_checkmate(board, swap_color(turn)):
+                print("\n" + board.get_string(True) + "")
                 print_win(turn)
                 exit_loop = True
                 break
@@ -705,17 +706,3 @@ def game():
 # d8 to h4
 
 game()
-
-# Traceback (most recent call last):
-#   File "/workspaces/py-chess/main.py", line 705, in <module>
-#     game()
-#   File "/workspaces/py-chess/main.py", line 688, in game
-#     if is_in_checkmate(board, swap_color(turn)):
-#   File "/workspaces/py-chess/main.py", line 653, in is_in_checkmate
-#     all_moves = get_all_legal_moves_for_player(board, color, check_check=True)
-#   File "/workspaces/py-chess/main.py", line 606, in get_all_legal_moves_for_player
-#     for coords in board.pieces:
-# RuntimeError: dictionary changed size during iteration
-
-# Happens when a check occurs
-# Will fix by copying board then iterating through that instead.
