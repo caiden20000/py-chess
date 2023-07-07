@@ -21,12 +21,13 @@ UNICODE_PIECES = False
 # Used to highlight moves
 HIGHLIGHT = "▒"
 # Used to highlight capture moves
-CAPTURE = "▒"
+CAPTURE_LEFT = "▌"
+CAPTURE_RIGHT = "▐"
 # Left and right of white pieces
 WHITE_SIDES = "░"
 # Left and right of black pieces
 BLACK_SIDES = " "
-
+# ░ ▒ ▓
 
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
@@ -295,7 +296,7 @@ class Board:
                     if piece is None:
                         result += HIGHLIGHT*3
                     else:
-                        result += f"{CAPTURE}{piece.get_string()[1]}{CAPTURE}"
+                        result += f"{CAPTURE_LEFT}{piece.get_string()[1]}{CAPTURE_RIGHT}"
                 else:
                     if piece is None:
                         result += "   "
