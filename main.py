@@ -3,9 +3,9 @@ from enum import Enum
 import random
 import sys
 
-# TODO: En Passant
+
 # TODO: Castling
-# TODO: Checkmate (That's dumb. Just take the King. TAKE IT. It's DUM-
+
 
 # Chess board is from a1 to h8
 # Inner coords replace letter with number: 00 to 77
@@ -14,8 +14,8 @@ HEIGHT = 8
 
 CHECK_DETECTION = True
 CHECKMATE_DETECTION = False
-BOT = False
-UNICODE_PIECES = False
+BOT = True
+UNICODE_PIECES = True
 
 
 class PieceColor(Enum):
@@ -105,6 +105,22 @@ def coords_from_ints(x: int, y: int) -> Coords | None:
         return None
     return Coords(x, y)
 
+def get_points_by_piece_type(piece_type: PieceType) -> int:
+    score = 0
+    if piece_type == PieceType.PAWN:
+        score = 1
+    if piece_type == PieceType.KNIGHT:
+        score = 3
+    if piece_type == PieceType.BISHOP:
+        score = 3
+    if piece_type == PieceType.ROOK:
+        score = 5
+    if piece_type == PieceType.QUEEN:
+        score = 9
+    # For lookaheads
+    if piece_type == PieceType.KING:
+        score = 100
+    return score
 
 class Piece:
     """Class to represent a chess piece."""
@@ -768,8 +784,8 @@ def game():
     while exit_loop is False:
         user_input = ""
         if BOT and turn == PieceColor.BLACK:
-            possible_inputs = get_all_legal_inputs_for_player(board, turn)
-            user_input = random.choice(possible_inputs)
+            # user_input = coords_to_input(*get_random_move(board, turn))
+            user_input = coords_to_input(*get_best_move(board, turn))
             print("> " + user_input)
         else:
             # User input prefix
@@ -797,5 +813,48 @@ def game():
 # g2 to g4
 # d8 to h4
 
+# [-100, 100]
+def get_move_score(board: Board, old_coords: Coords, new_coords: Coords) -> int:
+    piece = board.get_piece(old_coords)
+    if piece is None:
+        return -100
+    captured = board.get_piece(new_coords)
+    if captured is None:
+        return 0
+    points = get_points_by_piece_type(captured.type)
+    return points
+
+# def get_move_compound_score(board: Board, color: PieceColor, old_coords: Coords, new_coords: Coords, depth: int = 1, i: int = 0) -> int:
+#     if i == 0:
+#         board = deepcopy(board)
+#     for coords in get_all_legal_moves_for_player(board, color, True):
+#         score = get_move_compound_score(board, color, *coords, depth, i+1)
+    
+
+def get_best_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
+    legal = get_all_legal_moves_for_player(board, color, check_check = True)
+    best_moves: list[tuple[Coords, Coords]] = []
+    best_move_score = -100
+    for coords in legal:
+        move_score = get_move_score(board, *coords)
+        if len(best_moves) == 0 or move_score > best_move_score:
+            best_move_score = move_score
+            best_moves = [coords]
+        elif move_score == best_move_score:
+            best_moves += [coords]
+    if len(best_moves) == 0:
+        raise RuntimeError("No moves found. Am I in checkmate? This should have been deteced.")
+    # Choose randomly between all tied best choices
+    final_choice = random.choice(best_moves)
+    return final_choice
+
+def coords_to_input(coords_1: Coords, coords_2: Coords) -> str:
+    input_str = f"{coords_1.get_string()} to {coords_2.get_string()}"
+    return input_str
+
+def get_random_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
+    all_moves = get_all_legal_moves_for_player(board, color, True)
+    random_move = random.choice(all_moves)
+    return random_move
 
 game()
