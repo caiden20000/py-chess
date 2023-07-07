@@ -29,6 +29,7 @@ WHITE_SIDES = "░"
 BLACK_SIDES = " "
 # ░ ▒ ▓
 
+
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
     BLACK = BLACK_SIDES
@@ -116,6 +117,7 @@ def coords_from_ints(x: int, y: int) -> Coords | None:
         return None
     return Coords(x, y)
 
+
 def get_points_by_piece_type(piece_type: PieceType) -> int:
     score = 0
     if piece_type == PieceType.PAWN:
@@ -132,6 +134,7 @@ def get_points_by_piece_type(piece_type: PieceType) -> int:
     if piece_type == PieceType.KING:
         score = 100
     return score
+
 
 class Piece:
     """Class to represent a chess piece."""
@@ -440,7 +443,6 @@ def get_all_legal_moves(board: Board, old_coords: Coords, check_check: bool = Tr
         return []
 
     # Pawn legal moves
-    # TODO: After the changes, pawns can't capture at all.
     if piece.type == PieceType.PAWN:
         dy = 1 if piece.color == PieceColor.WHITE else -1
         forwards = _linear_iteration(board, old_coords, 0, dy,
@@ -451,14 +453,15 @@ def get_all_legal_moves(board: Board, old_coords: Coords, check_check: bool = Tr
             attack = _linear_iteration(
                 board, old_coords, *diagonal, limit=1)
             possible_capture += attack["possible_capture"]
-            
+
             # En passant legality
             if board.en_passant_cap is not None and board.en_passant_victim is not None:
                 # if _is_coords_in_list(board.en_passant_cap, attack["legal"]):
                 #     en_passant += [board.en_passant_cap]
                 ep_piece = board.get_piece(board.en_passant_victim)
                 if ep_piece is not None and ep_piece.color != piece.color:
-                    ep = Coords(old_coords.x + diagonal[0], old_coords.y + diagonal[1])
+                    ep = Coords(old_coords.x +
+                                diagonal[0], old_coords.y + diagonal[1])
                     if ep.x == board.en_passant_cap.x and ep.y == board.en_passant_cap.y:
                         en_passant += [ep]
 
@@ -694,12 +697,6 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         elif user_input == "board":
             print_board(board, turn)
             return False
-        
-        # elif user_input == "enpa": #TODO: debug
-        #     if board.en_passant_cap is None or board.en_passant_victim is None:
-        #         print("Nothing")
-        #     else:
-        #         print(f"Move to {board.en_passant_cap.get_string()} to capture {board.en_passant_victim.get_string()}")
 
         # The string matched none of the previous checks, bad input
         else:
@@ -834,6 +831,8 @@ def game():
 # d8 to h4
 
 # [-100, 100]
+
+
 def get_move_score(board: Board, old_coords: Coords, new_coords: Coords) -> int:
     piece = board.get_piece(old_coords)
     if piece is None:
@@ -844,13 +843,15 @@ def get_move_score(board: Board, old_coords: Coords, new_coords: Coords) -> int:
     points = get_points_by_piece_type(captured.type)
     return points
 
+
 def get_all_attacked_by(board: Board, color: PieceColor) -> list[Coords]:
-    legal = get_all_legal_moves_for_player(board, color, check_check = True)
+    legal = get_all_legal_moves_for_player(board, color, check_check=True)
     all_attacked: list[Coords] = []
     for coords in legal:
         if board.get_piece(coords[1]) is not None:
             all_attacked.append(coords[1])
     return all_attacked
+
 
 def get_board_score_for(board: Board, color: PieceColor = PieceColor.WHITE) -> int:
     score = 0
@@ -866,6 +867,7 @@ def get_board_score_for(board: Board, color: PieceColor = PieceColor.WHITE) -> i
             score += get_points_by_piece_type(attacked.type)
     return score
 
+
 def get_move_board_score(board: Board, old_coords: Coords, new_coords: Coords, ratio: float = 0.5):
     piece = board.get_piece(old_coords)
     if piece is None:
@@ -876,10 +878,10 @@ def get_move_board_score(board: Board, old_coords: Coords, new_coords: Coords, r
     post_move_score = get_board_score_for(bcopy, color)
     final_score = move_score + post_move_score * ratio
     return final_score
-    
+
 
 def get_best_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
-    legal = get_all_legal_moves_for_player(board, color, check_check = True)
+    legal = get_all_legal_moves_for_player(board, color, check_check=True)
     best_moves: list[tuple[Coords, Coords]] = []
     best_move_score = -100
     for coords in legal:
@@ -890,18 +892,22 @@ def get_best_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
         elif move_score == best_move_score:
             best_moves += [coords]
     if len(best_moves) == 0:
-        raise RuntimeError("No moves found. Am I in checkmate? This should have been deteced.")
+        raise RuntimeError(
+            "No moves found. Am I in checkmate? This should have been deteced.")
     # Choose randomly between all tied best choices
     final_choice = random.choice(best_moves)
     return final_choice
+
 
 def coords_to_input(coords_1: Coords, coords_2: Coords) -> str:
     input_str = f"{coords_1.get_string()} to {coords_2.get_string()}"
     return input_str
 
+
 def get_random_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
     all_moves = get_all_legal_moves_for_player(board, color, True)
     random_move = random.choice(all_moves)
     return random_move
+
 
 game()
