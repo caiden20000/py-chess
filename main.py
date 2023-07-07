@@ -17,21 +17,31 @@ CHECKMATE_DETECTION = False
 BOT = True
 UNICODE_PIECES = False
 
+# ASCII representation customization
+# Used to highlight moves
+HIGHLIGHT = "▒"
+# Used to highlight capture moves
+CAPTURE = "▒"
+# Left and right of white pieces
+WHITE_SIDES = "░"
+# Left and right of black pieces
+BLACK_SIDES = " "
+
 
 class PieceColor(Enum):
     """Enum to represent a chess piece color."""
-    BLACK = "b"
-    WHITE = "w"
+    BLACK = BLACK_SIDES
+    WHITE = WHITE_SIDES
 
 
 class PieceType(Enum):
     """Enum to represent a chess piece type."""
-    PAWN = "p"
-    ROOK = "r"
-    KNIGHT = "n"
-    BISHOP = "b"
-    QUEEN = "q"
-    KING = "k"
+    PAWN = "i"
+    ROOK = "┼"
+    KNIGHT = "2"
+    BISHOP = "Å"
+    QUEEN = "W"
+    KING = "±"
 
 
 def swap_color(color: PieceColor):
@@ -136,7 +146,7 @@ class Piece:
         """Returns a string representation of the piece. Should be str of length 3."""
         if UNICODE_PIECES:
             return self.unicode_version()
-        return self.color.value + self.type.value.upper() + self.color.value
+        return self.color.value + self.type.value + self.color.value
 
     def unicode_version(self) -> str:
         """Returns the unicode representation of the chess piece."""
@@ -283,9 +293,9 @@ class Board:
                 if highlight_list is not None and \
                         _is_coords_in_list(Coords(x, 7-y), highlight_list):
                     if piece is None:
-                        result += "▒▒▒"
+                        result += HIGHLIGHT*3
                     else:
-                        result += f"▓{piece.get_string()[1]}▓"
+                        result += f"{CAPTURE}{piece.get_string()[1]}{CAPTURE}"
                 else:
                     if piece is None:
                         result += "   "
@@ -833,11 +843,38 @@ def get_move_score(board: Board, old_coords: Coords, new_coords: Coords) -> int:
     points = get_points_by_piece_type(captured.type)
     return points
 
-# def get_move_compound_score(board: Board, color: PieceColor, old_coords: Coords, new_coords: Coords, depth: int = 1, i: int = 0) -> int:
-#     if i == 0:
-#         board = deepcopy(board)
-#     for coords in get_all_legal_moves_for_player(board, color, True):
-#         score = get_move_compound_score(board, color, *coords, depth, i+1)
+def get_all_attacked_by(board: Board, color: PieceColor) -> list[Coords]:
+    legal = get_all_legal_moves_for_player(board, color, check_check = True)
+    all_attacked: list[Coords] = []
+    for coords in legal:
+        if board.get_piece(coords[1]) is not None:
+            all_attacked.append(coords[1])
+    return all_attacked
+
+def get_board_score_for(board: Board, color: PieceColor = PieceColor.WHITE) -> int:
+    score = 0
+    attacking_us = get_all_attacked_by(board, swap_color(color))
+    for coords in attacking_us:
+        attacked = board.get_piece(coords)
+        if attacked is not None:
+            score -= get_points_by_piece_type(attacked.type)
+    attacking_them = get_all_attacked_by(board, color)
+    for coords in attacking_them:
+        attacked = board.get_piece(coords)
+        if attacked is not None:
+            score += get_points_by_piece_type(attacked.type)
+    return score
+
+def get_move_board_score(board: Board, old_coords: Coords, new_coords: Coords, ratio: float = 0.5):
+    piece = board.get_piece(old_coords)
+    if piece is None:
+        return -100
+    color = piece.color
+    bcopy = deepcopy(board)
+    move_score = get_move_score(board, old_coords, new_coords)
+    post_move_score = get_board_score_for(bcopy, color)
+    final_score = move_score + post_move_score * ratio
+    return final_score
     
 
 def get_best_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
@@ -845,7 +882,7 @@ def get_best_move(board: Board, color: PieceColor) -> tuple[Coords, Coords]:
     best_moves: list[tuple[Coords, Coords]] = []
     best_move_score = -100
     for coords in legal:
-        move_score = get_move_score(board, *coords)
+        move_score = get_move_board_score(board, *coords)
         if len(best_moves) == 0 or move_score > best_move_score:
             best_move_score = move_score
             best_moves = [coords]
