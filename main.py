@@ -115,7 +115,6 @@ class Piece:
         self.has_moved: bool = False
         # En Passant happens: 1. Only when an enemy pawn has made a 2-square advance
         #                     2. Only on the immediate following turn
-        self.en_passant_vulnerable: int = -2
 
     def get_string(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
