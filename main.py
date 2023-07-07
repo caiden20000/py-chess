@@ -15,7 +15,7 @@ HEIGHT = 8
 CHECK_DETECTION = True
 CHECKMATE_DETECTION = False
 BOT = True
-UNICODE_PIECES = True
+UNICODE_PIECES = False
 
 
 class PieceColor(Enum):
@@ -177,12 +177,15 @@ class Board:
             "old_coords": Coords,
             "new_coords": Coords,
             "old_piece": Piece,
-            "captured_piece": Piece
+            "captured_piece": Piece,
+            "last_coords": Coords
         }
         self.turn_counter = 1
         self.en_passant_cap: Coords | None = None
         self.en_passant_victim: Coords | None = None
         self.en_passantable_turn: int = 0
+        # Last coords is for highlighting the previous move's starting location
+        self.last_coords: Coords | None = None
 
     def clear(self):
         """Reset the board."""
@@ -220,6 +223,7 @@ class Board:
         self.last_move["en_passant_cap"] = deepcopy(self.en_passant_cap)
         self.last_move["en_passant_victim"] = deepcopy(self.en_passant_victim)
         self.last_move["en_passantable_turn"] = self.en_passantable_turn
+        self.last_move["last_coords"] = deepcopy(self.last_coords)
 
         # Set en passant vulnerability
         if piece.type == PieceType.PAWN and piece.has_moved is False:
@@ -233,6 +237,7 @@ class Board:
 
         self.remove_piece(old_coords)
         self.set_piece(piece, new_coords)
+        self.last_coords = old_coords
         return True
 
     def next_turn(self):
@@ -253,6 +258,7 @@ class Board:
         self.en_passant_cap = self.last_move["en_passant_cap"]
         self.en_passant_victim = self.last_move["en_passant_victim"]
         self.en_passantable_turn = self.last_move["en_passantable_turn"]
+        self.last_coords = self.last_move["last_coords"]
 
     def get_string(self, show_coords: bool = False, highlight_list: list[Coords] | None = None):
         """
@@ -642,9 +648,12 @@ def print_legal_moves(board: Board, coords: Coords):
     print("| " + list_legal_moves(board, coords) + "\n")
 
 
-def print_board(board: Board, turn: PieceColor):
+def print_board(board: Board, turn: PieceColor, highlight_last_move: bool = True):
     """Print the current board state and who's turn it is."""
-    print("\n" + board.get_string(True) + "")
+    if board.last_coords is None or highlight_last_move is False:
+        print("\n" + board.get_string(True) + "")
+    else:
+        print("\n" + board.get_string(True, [board.last_coords]) + "")
     print_turn(turn)
 
 
