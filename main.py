@@ -1,3 +1,4 @@
+from copy import deepcopy
 from enum import Enum
 import random
 import sys
@@ -155,6 +156,12 @@ class Board:
 
     def __init__(self):
         self.pieces: dict[str, Piece | None] = {}
+        self.last_move = {
+            "old_coords": Coords,
+            "new_coords": Coords,
+            "old_piece": Piece,
+            "captured_piece": Piece
+        }
 
     def clear(self):
         """Reset the board."""
@@ -186,6 +193,12 @@ class Board:
         if piece is None:
             err_no_piece(old_coords)
             return False
+        # Checks passed, move is happening
+        # Backup last state for simulation moves
+        self.last_move["old_coords"] = deepcopy(old_coords)
+        self.last_move["new_coords"] = deepcopy(new_coords)
+        self.last_move["old_piece"] = deepcopy(piece)
+        self.last_move["captured_piece"] = deepcopy(self.get_piece(new_coords))
         # Clear en passant vulnerabilities
         for other_piece in self.pieces.values():
             if other_piece is not None and other_piece.en_passant_vulnerable:
@@ -200,6 +213,11 @@ class Board:
         self.remove_piece(old_coords)
         self.set_piece(piece, new_coords)
         return True
+
+    def revert_last_move(self):
+        """Reverts the board to the last move. Reverts piece flags with saved deep copies."""
+        self.set_piece(self.last_move["old_piece"], self.last_move["old_coords"])
+        self.set_piece(self.last_move["captured_piece"], self.last_move["new_coords"])
 
     def get_string(self, show_coords: bool = False, highlight_list: list[Coords] | None = None):
         """
@@ -326,7 +344,6 @@ def _linear_iteration(board: Board,
 
 def would_move_cause_self_check(board: Board, old: Coords, new: Coords) -> bool:
     """Simulates a move and returns True if the player is in check afterwards."""
-    temp_piece = board.get_piece(new)
     moving_piece = board.get_piece(old)
     if moving_piece is None:
         return False
@@ -335,8 +352,7 @@ def would_move_cause_self_check(board: Board, old: Coords, new: Coords) -> bool:
     board.move(old, new)
     if is_in_check(board, color):
         result = True
-    board.move(new, old)
-    board.set_piece(temp_piece, new)
+    board.revert_last_move()
     return result
 
 # TODO: Improve the CHECK detection with optimization
@@ -504,8 +520,7 @@ def move(board: Board, move_str: str, turn: PieceColor) -> bool:
         board.move(*coords)
         # Reverse move if now in CHECK (or still in CHECK)
         if CHECK_DETECTION and is_in_check(board, turn):
-            board.move(coords[1], coords[0])
-            board.set_piece(captured_piece, coords[1])
+            board.revert_last_move()
             err_in_check()
             return False
         if captured_piece is not None:
