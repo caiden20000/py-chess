@@ -33,6 +33,7 @@ class PieceType(Enum):
     KING = "k"
 
 def swap_color(color: PieceColor):
+    """Returns white if given black. Returns black if given white."""
     return PieceColor.BLACK if color == PieceColor.WHITE else PieceColor.WHITE
 
 def piece_color_to_str(piece_color: PieceColor) -> str:
@@ -106,9 +107,12 @@ class Piece:
     """Class to represent a chess piece."""
 
     def __init__(self, piece_type: PieceType, color: PieceColor):
-        self.type = piece_type
-        self.color = color
-        self.has_moved = False
+        self.type: PieceType = piece_type
+        self.color: PieceColor = color
+        self.has_moved: bool = False
+        # En Passant happens: 1. Only when an enemy pawn has made a 2-square advance
+        #                     2. Only on the immediate following turn
+        self.en_passant_vulnerable: bool = False
 
     def get_string(self) -> str:
         """Returns a string representation of the piece. Should be str of length 3."""
@@ -150,11 +154,11 @@ class Board:
     """Class to represent a chess board."""
 
     def __init__(self):
-        self.pieces: dict[Piece | None] = {}
+        self.pieces: dict[str, Piece | None] = {}
 
     def clear(self):
         """Reset the board."""
-        self.pieces: dict[Piece | None] = {}
+        self.pieces = {}
 
     def get_piece(self, coords: Coords) -> Piece | None:
         """Returns the piece at a given coords. Returns None if no piece exists."""
@@ -163,7 +167,7 @@ class Board:
         except KeyError:
             return None
 
-    def set_piece(self, piece: Piece, coords: Coords):
+    def set_piece(self, piece: Piece | None, coords: Coords):
         """Sets a piece at a given coords."""
         self.pieces[coords.to_board_key()] = piece
 
@@ -173,12 +177,26 @@ class Board:
 
     def move(self, old_coords: Coords, new_coords: Coords) -> bool:
         """Moves a piece from old_coords to new_coords. Returns True if successful."""
+        if old_coords.x == new_coords.x and old_coords.y == new_coords.y:
+            # Should moving to the same square be successful or not?
+            # We don't actually check the output of this function anywhere in out code
+            # So it doesn't _really_ matter
+            return False
         piece = self.get_piece(old_coords)
         if piece is None:
             err_no_piece(old_coords)
             return False
+        # Clear en passant vulnerabilities
+        for other_piece in self.pieces.values():
+            if other_piece is not None and other_piece.en_passant_vulnerable:
+                other_piece.en_passant_vulnerable = False
+        # Set en passant vulnerability
+        if piece.type == PieceType.PAWN and piece.has_moved is False:
+            if abs(old_coords.y - new_coords.y) > 1:
+                piece.en_passant_vulnerable = True
         if piece.has_moved is False:
             piece.has_moved = True
+
         self.remove_piece(old_coords)
         self.set_piece(piece, new_coords)
         return True
@@ -254,7 +272,7 @@ class Board:
         self.set_piece(Piece(PieceType.ROOK, PieceColor.BLACK), Coords(7, 7))
 
 
-def parse_move(move_str: str, delimiter: str = " to ") -> tuple[Coords] | None:
+def parse_move(move_str: str, delimiter: str = " to ") -> tuple[Coords, Coords] | None:
     """Parses moves in 'xy to xy' format. Returns tuple pair of Coords. Returns None if err."""
     if len(move_str) != len("xx" + delimiter + "yy"):
         return None
@@ -282,7 +300,7 @@ def piece_exists_at(board: Board, coords: Coords) -> bool:
 def _linear_iteration(board: Board,
                       old_coords: Coords,
                       dx: int, dy: int,
-                      limit: int = 50) -> dict[list[Coords]]:
+                      limit: int = 50) -> dict[str, list[Coords]]:
     """Useful iteration tool for legal move generation."""
     legal: list[Coords] = []
     possible_capture: list[Coords] = []
@@ -306,10 +324,12 @@ def _linear_iteration(board: Board,
         counter += 1
     return {"legal": legal, "possible_capture": possible_capture}
 
-def would_move_check(board: Board, old: Coords, new: Coords):
+def would_move_cause_self_check(board: Board, old: Coords, new: Coords) -> bool:
     """Simulates a move and returns True if the player is in check afterwards."""
     temp_piece = board.get_piece(new)
     moving_piece = board.get_piece(old)
+    if moving_piece is None:
+        return False
     color = moving_piece.color
     result = False
     board.move(old, new)
@@ -326,11 +346,11 @@ def would_move_check(board: Board, old: Coords, new: Coords):
 # if not in check:
 #   only simulate moves from pieces that are ALREADY attacked.
 #   (Assuming the only way to self-check is to unblock an attack)
-def prune_check_moves(board: Board, old: Coords, legal: list[Coords], invert: bool = False) -> list[Coords]:
+def prune_all_self_checking_moves(board: Board, old: Coords, legal: list[Coords], invert: bool = False) -> list[Coords]:
     """Removes all moves that would leave you in CHECK."""
     final: list[Coords] = []
     for coords in legal:
-        if would_move_check(board, old, coords):
+        if would_move_cause_self_check(board, old, coords):
             if invert:
                 final.append(coords)
             continue
@@ -343,29 +363,28 @@ def get_all_legal_moves(board: Board, old_coords: Coords, check_check: bool = Tr
     legal: list[Coords] = []
     possible_capture: list[Coords] = []
     piece = board.get_piece(old_coords)
+    if piece is None:
+        return []
 
     # Pawn legal moves
     if piece.type == PieceType.PAWN:
+        dy: int = 0
         if piece.color == PieceColor.WHITE:
-            # +y
-            forwards = _linear_iteration(board, old_coords, 0, 1,
-                                         limit=1 if piece.has_moved else 2)
-            legal += forwards["legal"]
-            diagonals = [(-1, 1), (1, 1)]
-            for diagonal in diagonals:
-                attack = _linear_iteration(
-                    board, old_coords, *diagonal, limit=1)
-                possible_capture += attack["possible_capture"]
+            dy = 1
         if piece.color == PieceColor.BLACK:
-            # -y
-            forwards = _linear_iteration(board, old_coords, 0, -1,
+            dy = -1
+        forwards = _linear_iteration(board, old_coords, 0, dy,
                                          limit=1 if piece.has_moved else 2)
-            legal += forwards["legal"]
-            diagonals = [(-1, -1), (1, -1)]
-            for diagonal in diagonals:
-                attack = _linear_iteration(
-                    board, old_coords, *diagonal, limit=1)
-                possible_capture += attack["possible_capture"]
+        legal += forwards["legal"]
+        diagonals = [(-1, dy), (1, dy)]
+        for diagonal in diagonals:
+            attack = _linear_iteration(
+                board, old_coords, *diagonal, limit=1)
+            possible_capture += attack["possible_capture"]
+            # En passant legality
+            side_piece = board.get_piece(Coords(diagonal[0], 0))
+            if side_piece is not None and side_piece.en_passant_vulnerable is True:
+                possible_capture.append(Coords(*diagonal))
 
     # Rook legal moves
     if piece.type == PieceType.ROOK:
@@ -419,11 +438,12 @@ def get_all_legal_moves(board: Board, old_coords: Coords, check_check: bool = Tr
 
     # Add legal captures to legal list
     for coords in possible_capture:
-        if board.get_piece(coords).color != piece.color:
+        piece = board.get_piece(coords)
+        if piece is not None and piece.color != piece.color:
             legal.append(coords)
     # Remove moves that put the player in CHECK
     if check_check:
-        final = prune_check_moves(board, old_coords, legal)
+        final = prune_all_self_checking_moves(board, old_coords, legal)
         return final
     return legal
 
@@ -491,7 +511,7 @@ def move(board: Board, move_str: str, turn: PieceColor) -> bool:
         if captured_piece is not None:
             capture(captured_piece)
         return True
-    elif would_move_check(board, *coords):
+    elif would_move_cause_self_check(board, *coords):
         err_in_check()
         return False
     else:
@@ -590,6 +610,7 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         else:
             print("!!! Unrecognized input, try again:\n")
             print_instructional_text()
+            return False
 
     # Any error raised is a sign of a failure
     except (KeyError, ValueError) as ex:
@@ -597,16 +618,19 @@ def handle_input(board: Board, turn: PieceColor, user_input: str) -> bool:
         print("!!! Input error, try again:\n")
         print_instructional_text()
         return False
+    return False
 
 # Apparently a pinned piece CAN still check your king.
 def get_all_legal_moves_for_player(board: Board, turn: PieceColor, check_check: bool = False):
     """Returns list of tuple pairs of coordinates representing every possible move for a player."""
     # Moves are Coords tuple pairs, eg (a4, b5)
-    all_moves: list[tuple[Coords]] = []
+    all_moves: list[tuple[Coords, Coords]] = []
     # Copy to avoid dict change during iteration err
     pieces = board.pieces.copy()
-    for coords in pieces:
+    for coords in pieces.keys():
         old_coords = coords_from_string(coords)
+        if old_coords is None:
+            continue
         piece = board.get_piece(old_coords)
         if piece is None or piece.color != turn:
             continue
