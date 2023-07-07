@@ -5,12 +5,13 @@ Almost working version! Most systems are implemented!I think the visualization o
 
 TODO:
 - ~~SELF-CHECK detection in get_all_legal_moves~~
-- En Passant capturing
+- ~~En Passant capturing~~
 - Castling
 - ~~Checkmate detection~~
 - ~~Win case (Game over screen)~~
 - Make a dumb bot
 - Add a function to see which pieces you're allowed to move (for when you're restricted in CHECK)
+- Play the silly thing to find any bugs.
 
 "Screenshot":
 ```
